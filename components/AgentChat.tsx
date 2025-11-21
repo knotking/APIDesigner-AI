@@ -39,7 +39,7 @@ export const AgentChat: React.FC<AgentChatProps> = ({ spec, onCallEndpoint }) =>
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isThinking]);
+  }, [messages, isThinking, isExpanded]);
 
   // Focus input when expanded
   useEffect(() => {
@@ -52,7 +52,7 @@ export const AgentChat: React.FC<AgentChatProps> = ({ spec, onCallEndpoint }) =>
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
     }
   }, [input]);
 
@@ -111,10 +111,12 @@ export const AgentChat: React.FC<AgentChatProps> = ({ spec, onCallEndpoint }) =>
       const responseSchema = operation?.responses?.['200']?.content?.['application/json']?.schema || 
                              operation?.responses?.['201']?.content?.['application/json']?.schema || {};
       
+      // Default to creative mode for NLP interactions
       const result = await generateMockResponse(
           operation?.operationId || `${plan.method} ${plan.path}`,
           responseSchema,
-          { ...plan.params, ...plan.body }
+          { ...plan.params, ...plan.body },
+          { variationLevel: 'creative' }
       );
 
       // 4. Show Result
@@ -161,7 +163,7 @@ export const AgentChat: React.FC<AgentChatProps> = ({ spec, onCallEndpoint }) =>
   // Styles for expanded vs inline
   const containerClass = isExpanded 
     ? "fixed inset-0 z-50 bg-slate-950 flex flex-col animate-in fade-in duration-200" 
-    : "relative flex flex-col h-full bg-slate-950 rounded-lg border border-slate-800 overflow-hidden";
+    : "relative flex flex-col h-full bg-slate-950 rounded-lg overflow-hidden";
 
   return (
     <div className={containerClass}>
@@ -305,8 +307,9 @@ export const AgentChat: React.FC<AgentChatProps> = ({ spec, onCallEndpoint }) =>
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Ask the agent to test endpoints (e.g., 'Create 5 new users' or 'Get products with price > 50')..."
-                    className="flex-1 bg-transparent border-none focus:outline-none text-slate-200 text-sm placeholder-slate-500 resize-none max-h-[150px] py-1"
+                    className="flex-1 bg-transparent border-none focus:outline-none text-slate-200 text-sm placeholder-slate-500 resize-none max-h-[150px] py-1 custom-scrollbar"
                     rows={1}
+                    style={{ minHeight: '24px' }}
                 />
                 <button 
                     onClick={handleSend}

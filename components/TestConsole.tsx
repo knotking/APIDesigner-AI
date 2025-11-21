@@ -1,15 +1,15 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Operation, Parameter, OpenAPISpec } from '../types';
-import { Play, Loader2, Sparkles } from 'lucide-react';
+import { Play, Loader2, Sparkles, Settings2, ChevronDown, X } from 'lucide-react';
 import { AgentChat } from './AgentChat';
+import { MockGenOptions } from '../services/geminiService';
 
 interface TestConsoleProps {
   spec: OpenAPISpec | null;
   path: string;
   method: string;
   operation: Operation;
-  onExecute: (params: any) => Promise<void>;
+  onExecute: (params: any, options?: MockGenOptions) => Promise<void>;
   onAutoSelect?: (path: string, method: string, params: any, body: any) => void;
   loading: boolean;
 }
@@ -26,6 +26,24 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
   const [params, setParams] = useState<Record<string, string>>({});
   const [jsonBody, setJsonBody] = useState<string>('{\n  \n}');
   const [activeTab, setActiveTab] = useState<'params' | 'body' | 'nlp'>('params');
+  
+  // Settings State
+  const [showSettings, setShowSettings] = useState(false);
+  const [variationLevel, setVariationLevel] = useState<'strict' | 'creative'>('strict');
+  const [exampleValues, setExampleValues] = useState<string>('');
+  
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Close settings on click outside
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setShowSettings(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Reset params when endpoint changes
   useEffect(() => {
@@ -35,6 +53,7 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
     });
     setParams(initialParams);
     setJsonBody('{\n  \n}');
+    // Persistent settings are better for UX, so we don't reset variationLevel/exampleValues automatically
     
     if (activeTab !== 'nlp') {
         // Auto-switch to body tab if it's a POST/PUT
@@ -59,7 +78,20 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
             // Allow empty body if simple request
         }
     }
-    onExecute({ ...params, _body: parsedBody });
+
+    let parsedExamples = {};
+    try {
+        if (exampleValues.trim()) {
+            parsedExamples = JSON.parse(exampleValues);
+        }
+    } catch (e) {
+        console.warn("Invalid example values JSON");
+    }
+
+    onExecute({ ...params, _body: parsedBody }, {
+        variationLevel,
+        exampleValues: parsedExamples
+    });
   };
 
   const allParams = operation.parameters || [];
@@ -101,7 +133,7 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         {activeTab === 'params' && (
             <div className="p-6 overflow-y-auto h-full space-y-4">
                 {allParams.length === 0 ? (
@@ -151,21 +183,76 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
         )}
       </div>
 
-      {/* Action Bar - Only show for manual params/body tabs */}
+      {/* Action Bar */}
       {activeTab !== 'nlp' && (
-        <div className="p-6 border-t border-slate-800 bg-slate-900/30">
-            <button 
-                onClick={handleRun}
-                disabled={loading}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-900/20"
-            >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
-                {loading ? 'Generating Virtual Response...' : 'Execute Request'}
-            </button>
-            <div className="mt-2 text-center">
-                <p className="text-[10px] text-slate-500">
-                    Powered by Gemini 2.5 Flash. Virtual Backend Simulation.
-                </p>
+        <div className="p-6 border-t border-slate-800 bg-slate-900/30 flex items-center gap-3 relative z-20">
+            <div className="flex-1 flex gap-2">
+                <button 
+                    onClick={handleRun}
+                    disabled={loading}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-900/20"
+                >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
+                    {loading ? 'Generating Virtual Response...' : 'Execute Request'}
+                </button>
+                
+                <div className="relative" ref={settingsRef}>
+                    <button 
+                        onClick={() => setShowSettings(!showSettings)}
+                        className={`h-full px-4 rounded-lg border border-slate-700 flex items-center gap-2 transition-colors ${showSettings ? 'bg-slate-800 text-white border-indigo-500' : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                        title="Mock Data Settings"
+                    >
+                        <Settings2 className="w-5 h-5" />
+                    </button>
+
+                    {/* Settings Popover */}
+                    {showSettings && (
+                        <div className="absolute bottom-full right-0 mb-2 w-80 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl p-4 z-30 animate-in fade-in zoom-in-95 duration-200">
+                            <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
+                                <h4 className="text-sm font-semibold text-slate-200">Mock Settings</h4>
+                                <button onClick={() => setShowSettings(false)} className="text-slate-500 hover:text-slate-300">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-medium text-slate-400 block mb-1.5">Variation Level</label>
+                                    <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-md border border-slate-800">
+                                        <button 
+                                            onClick={() => setVariationLevel('strict')}
+                                            className={`text-xs py-1.5 rounded transition-all ${variationLevel === 'strict' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                                        >
+                                            Strict
+                                        </button>
+                                        <button 
+                                            onClick={() => setVariationLevel('creative')}
+                                            className={`text-xs py-1.5 rounded transition-all ${variationLevel === 'creative' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                                        >
+                                            Creative
+                                        </button>
+                                    </div>
+                                    <p className="text-[10px] text-slate-600 mt-1.5">
+                                        {variationLevel === 'strict' ? 'Predictable data conforming to schema types.' : 'Varied, realistic data with creative descriptions.'}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-medium text-slate-400 block mb-1.5">
+                                        Field Overrides (JSON)
+                                    </label>
+                                    <textarea 
+                                        value={exampleValues}
+                                        onChange={(e) => setExampleValues(e.target.value)}
+                                        placeholder='{"name": "Acme Corp", "status": "active"}'
+                                        className="w-full h-24 bg-slate-950 border border-slate-800 rounded p-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-indigo-500 resize-none placeholder-slate-700 leading-relaxed"
+                                        spellCheck={false}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
       )}

@@ -10,10 +10,16 @@ const getClient = () => {
     return new GoogleGenAI({ apiKey });
 };
 
+export interface MockGenOptions {
+    variationLevel?: 'strict' | 'creative';
+    exampleValues?: Record<string, any>;
+}
+
 export const generateMockResponse = async (
     operationId: string,
     schema: any,
-    userParams: any
+    userParams: any,
+    options: MockGenOptions = {}
 ): Promise<any> => {
     const client = getClient();
     if (!client) {
@@ -22,7 +28,18 @@ export const generateMockResponse = async (
 
     // Fallback if schema is missing or empty
     if (!schema || Object.keys(schema).length === 0) {
-        return { message: "Success (No schema defined for this response)" };
+        return { message: "Success (No schema defined for this response)", ...options.exampleValues };
+    }
+
+    const isCreative = options.variationLevel === 'creative';
+    
+    let exampleContext = '';
+    if (options.exampleValues && Object.keys(options.exampleValues).length > 0) {
+        exampleContext = `
+        CRITICAL INSTRUCTION - USER PROVIDED OVERRIDES:
+        The user has explicitly provided the following example values. You MUST use these values for their corresponding fields in the generated JSON, overriding any random generation.
+        ${JSON.stringify(options.exampleValues, null, 2)}
+        `;
     }
 
     const prompt = `
@@ -32,13 +49,15 @@ export const generateMockResponse = async (
     Operation ID: ${operationId}
     User Input Parameters: ${JSON.stringify(userParams)}
     
+    ${exampleContext}
+    
     Response Schema:
     ${JSON.stringify(schema, null, 2)}
     
     Rules:
     1. Output strictly valid JSON. No markdown code blocks.
-    2. Generate realistic, varied data (e.g., real names, plausible prices).
-    3. If an array is requested, generate 2-4 items.
+    2. Variation Style: ${isCreative ? 'CREATIVE. Generate diverse, realistic, and interesting data (e.g., vary names, use realistic descriptions, believable timestamps).' : 'STRICT. Generate standard, predictable data adhering strictly to types. Use generic values (e.g., "string", 0) unless specific formats require otherwise.'}
+    3. If an array is requested, generate ${isCreative ? '3-5' : '1-2'} items.
     4. Respect the 'User Input Parameters' if they influence the output (e.g., if user asks for id=123, return object with id=123).
     `;
 
@@ -48,7 +67,7 @@ export const generateMockResponse = async (
             contents: prompt,
             config: {
                 responseMimeType: 'application/json',
-                temperature: 0.4, // Lower temperature for more consistent structural adherence
+                temperature: isCreative ? 0.8 : 0.1, // Dynamic temperature
             }
         });
         
@@ -116,9 +135,9 @@ export const parseNLQuery = async (
                 const op = (methods as any)[method];
                 return {
                     method,
-                    summary: op.summary,
-                    operationId: op.operationId,
-                    params: op.parameters?.map((p: any) => p.name) || []
+                    summary: op?.summary || '',
+                    operationId: op?.operationId || '',
+                    params: op?.parameters?.map((p: any) => p.name) || []
                 };
             })
         };
