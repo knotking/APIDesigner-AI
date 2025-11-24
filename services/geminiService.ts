@@ -18,6 +18,20 @@ export interface MockGenOptions {
 export type ArtifactType = 'mcp-server' | 'api-client' | 'api-server' | 'documentation';
 export type Language = 'python' | 'java' | 'go' | 'csharp' | 'typescript' | 'cpp' | 'markdown' | 'html' | 'asciidoc';
 
+export interface AnalysisIssue {
+    severity: 'critical' | 'warning' | 'info';
+    category: 'security' | 'correctness' | 'design' | 'performance';
+    message: string;
+    location?: string;
+    suggestion?: string;
+}
+
+export interface AnalysisReport {
+    score: number;
+    summary: string;
+    issues: AnalysisIssue[];
+}
+
 export const generateMockResponse = async (
     operationId: string,
     schema: any,
@@ -218,12 +232,16 @@ export const parseNLQuery = async (
     }
 };
 
-export const generateSpecFromPrompt = async (description: string, url?: string): Promise<string> => {
+export const generateSpecFromPrompt = async (description: string, url?: string, currentSpec?: string): Promise<string> => {
     const client = getClient();
     if (!client) return "# Error: API Key missing";
 
-    let context = `User Description: "${description}"`;
+    let context = `User Description/Instructions: "${description}"`;
     let tools = undefined;
+    
+    if (currentSpec) {
+        context += `\n\nExisting OpenAPI Spec to Modify/Refine:\n${currentSpec}\n\nINSTRUCTION: Modify the existing spec based on the User Instructions. Do not start from scratch unless asked. Preserve existing logic where applicable.`;
+    }
 
     if (url) {
         context = `
@@ -241,7 +259,7 @@ export const generateSpecFromPrompt = async (description: string, url?: string):
     const prompt = `
     You are an expert Software Architect specializing in OpenAPI (Swagger) specifications.
     
-    Task: Create a complete, valid OpenAPI 3.0 YAML specification based on the provided context.
+    Task: Create or Modify an OpenAPI 3.0 YAML specification based on the provided context.
     
     Context:
     ${context}
@@ -327,5 +345,50 @@ export const detectMessagingPattern = async (spec: OpenAPISpec): Promise<{ path:
         return JSON.parse(response.text || "null");
     } catch (e) {
         return null;
+    }
+};
+
+export const analyzeSpec = async (specYaml: string): Promise<AnalysisReport> => {
+    const client = getClient();
+    if (!client) return { score: 0, summary: "API Key Missing", issues: [] };
+
+    const prompt = `
+    You are an expert OpenAPI Specification Auditor.
+    
+    Task: Analyze the following OpenAPI YAML spec for bugs, logical inconsistencies, security risks, and RESTful best practices.
+    
+    Spec:
+    ${specYaml.substring(0, 20000)}
+    
+    Return a JSON object with this structure:
+    {
+      "score": number, // 0-100 quality score
+      "summary": string, // Brief 1-sentence overview of health
+      "issues": [
+         {
+           "severity": "critical" | "warning" | "info",
+           "category": "security" | "correctness" | "design" | "performance",
+           "message": string, // The issue description
+           "location": string, // e.g., "GET /users", "components.schemas.User",
+           "suggestion": string // How to fix it
+         }
+      ]
+    }
+    
+    Rules:
+    - Critical: Security holes (missing auth), broken refs, missing responses, invalid syntax.
+    - Warning: Missing descriptions, poor naming, inconsistent types.
+    - Info: Suggestions for improvement (e.g., add pagination).
+    `;
+
+    try {
+        const response = await client.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: { responseMimeType: 'application/json' }
+        });
+        return JSON.parse(response.text || '{"score": 0, "summary": "Failed to parse", "issues": []}');
+    } catch (error) {
+        return { score: 0, summary: "Analysis Failed", issues: [{ severity: 'critical', category: 'correctness', message: String(error) }] };
     }
 };

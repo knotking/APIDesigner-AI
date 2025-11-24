@@ -9,7 +9,8 @@ import { MCPGenerator } from './components/MCPGenerator';
 import { SpecGeneratorModal } from './components/SpecGeneratorModal';
 import { LoadTestGenerator } from './components/LoadTestGenerator';
 import { MessagingSimulator } from './components/MessagingSimulator';
-import { generateMockResponse, MockGenOptions } from './services/geminiService';
+import { SpecAnalysisModal } from './components/SpecAnalysisModal';
+import { generateMockResponse, MockGenOptions, analyzeSpec, AnalysisReport } from './services/geminiService';
 import { Braces, Menu, Zap, MessageSquare, ChevronDown, TestTube2, Code2 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -23,11 +24,17 @@ const App: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Modals State
   const [isMCPOpen, setIsMCPOpen] = useState(false);
   const [isSpecGenOpen, setIsSpecGenOpen] = useState(false);
   const [isLoadGenOpen, setIsLoadGenOpen] = useState(false);
   const [isMsgSimOpen, setIsMsgSimOpen] = useState(false);
   
+  // Analysis State
+  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
+  const [analysisReport, setAnalysisReport] = useState<AnalysisReport | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
   const [isTestingMenuOpen, setIsTestingMenuOpen] = useState(false);
   const testingMenuRef = useRef<HTMLDivElement>(null);
 
@@ -130,6 +137,16 @@ const App: React.FC = () => {
     }
   };
 
+  const handleAnalyzeSpec = async () => {
+      setIsAnalysisOpen(true);
+      setIsAnalyzing(true);
+      setAnalysisReport(null);
+      
+      const report = await analyzeSpec(rawSpec);
+      setAnalysisReport(report);
+      setIsAnalyzing(false);
+  };
+
   // Safe access to active operation
   const activePathItem = (parsedSpec && parsedSpec.paths && selectedPath) ? parsedSpec.paths[selectedPath] : null;
   const activeOperation = (activePathItem && selectedMethod) ? activePathItem[selectedMethod] : null;
@@ -227,6 +244,7 @@ const App: React.FC = () => {
                         onChange={setRawSpec} 
                         error={specError}
                         onAiGenerate={() => setIsSpecGenOpen(true)}
+                        onAnalyze={handleAnalyzeSpec}
                     />
                 )}
             </div>
@@ -261,6 +279,13 @@ const App: React.FC = () => {
         isOpen={isSpecGenOpen}
         onClose={() => setIsSpecGenOpen(false)}
         onGenerate={(yaml) => setRawSpec(yaml)}
+      />
+
+      <SpecAnalysisModal
+        isOpen={isAnalysisOpen}
+        onClose={() => setIsAnalysisOpen(false)}
+        report={analysisReport}
+        loading={isAnalyzing}
       />
 
     </div>

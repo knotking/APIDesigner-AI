@@ -76,5 +76,10 @@ declare global {
     jsyaml: {
       load: (input: string) => any;
     };
+    // Add jsPDF to window if loaded via CDN
+    jspdf?: {
+        jsPDF: any;
+    };
+    jsPDF?: any;
   }
 }
