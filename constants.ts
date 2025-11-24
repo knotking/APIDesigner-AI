@@ -20,6 +20,7 @@ paths:
           schema:
             type: integer
             format: int32
+          example: 20
       responses:
         '200':
           description: A paged array of products

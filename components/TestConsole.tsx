@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Operation, Parameter, OpenAPISpec } from '../types';
-import { Play, Loader2, Sparkles, Settings2, ChevronDown, X } from 'lucide-react';
+import { Play, Loader2, Sparkles, Settings2, ChevronDown, X, MessageSquare, Bot } from 'lucide-react';
 import { AgentChat } from './AgentChat';
 import { MockGenOptions } from '../services/geminiService';
 
@@ -128,7 +128,7 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
             onClick={() => setActiveTab('nlp')}
             className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'nlp' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
         >
-            <Sparkles className="w-3 h-3" /> NLP Simulation
+            <Bot className="w-3.5 h-3.5" /> NLP Tester
         </button>
       </div>
 

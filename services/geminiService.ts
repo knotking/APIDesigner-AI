@@ -15,6 +15,9 @@ export interface MockGenOptions {
     exampleValues?: Record<string, any>;
 }
 
+export type ArtifactType = 'mcp-server' | 'api-client' | 'api-server';
+export type Language = 'python' | 'java' | 'go' | 'csharp' | 'typescript' | 'cpp';
+
 export const generateMockResponse = async (
     operationId: string,
     schema: any,
@@ -81,31 +84,63 @@ export const generateMockResponse = async (
     }
 };
 
-export const generateMCPCode = async (
+export const generateCodeArtifact = async (
     specYaml: string,
-    language: 'python' | 'java' | 'go'
+    language: Language,
+    type: ArtifactType
 ): Promise<string> => {
     const client = getClient();
     if (!client) return "// Error: API Key missing";
 
+    let typeDescription = "";
+    let specifics = "";
+
+    switch (type) {
+        case 'mcp-server':
+            typeDescription = "Model Context Protocol (MCP) server";
+            specifics = `
+            - Implement the MCP server protocol (JSON-RPC 2.0).
+            - Map the OpenAPI endpoints defined in the spec to MCP Tools.
+            - Provide a comprehensive implementation ready to run.
+            `;
+            break;
+        case 'api-client':
+            typeDescription = "API Client Library (SDK)";
+            specifics = `
+            - Create a robust, reusable client class/struct.
+            - Implement typed methods for all endpoints found in the spec.
+            - Handle HTTP requests, error handling, and response deserialization.
+            - Include data models/DTOs for requests and responses.
+            `;
+            break;
+        case 'api-server':
+            typeDescription = "API Server Skeleton/Stub";
+            specifics = `
+            - Generate a server implementation stub using a popular framework for ${language}.
+            - Define routes/controllers matching the OpenAPI spec.
+            - Include DTOs/Models validation logic where appropriate.
+            - Framework suggestions: Spring Boot (Java), FastAPI (Python), Gin (Go), ASP.NET Core (C#), Express/NestJS (TypeScript), Crow/Drogon (C++).
+            `;
+            break;
+    }
+
     const prompt = `
-    You are an expert developer implementing the Model Context Protocol (MCP) for AI agents.
+    You are an expert developer specializing in API tooling.
     
-    Task: Generate a complete, runnable MCP server implementation for the following OpenAPI specification.
+    Task: Generate a complete, runnable ${typeDescription} for the following OpenAPI specification.
     Target Language: ${language}
     
     OpenAPI Spec:
     ${specYaml}
     
     Requirements:
-    1. Implement the MCP server protocol (JSON-RPC 2.0 over Stdio or SSE).
-    2. Map the OpenAPI endpoints defined in the spec to MCP Tools.
-    3. Include necessary imports and a main entry point.
-    4. Add clear comments explaining the tool definitions.
-    5. If using Python, use the 'mcp' library or standard 'sys.stdin/stdout'.
-    6. If using Go, use standard 'encoding/json' and 'os'.
-    7. If using Java, use a standard JSON library (Jackson/Gson) and System.in/out.
-    8. Output ONLY the code (no markdown backticks).
+    1. Output ONLY the code (no markdown backticks).
+    2. Include necessary imports and a main entry point if applicable.
+    3. Add clear comments explaining the code structure.
+    4. Code should be idiomatic and follow best practices for ${language}.
+    
+    Specific Requirements for ${typeDescription}:
+    ${specifics}
     `;
 
     try {
@@ -173,23 +208,77 @@ export const parseNLQuery = async (
     }
 };
 
-export const generateSpecFromPrompt = async (description: string): Promise<string> => {
+export const generateSpecFromPrompt = async (description: string, url?: string): Promise<string> => {
     const client = getClient();
     if (!client) return "# Error: API Key missing";
+
+    let context = `User Description: "${description}"`;
+    let tools = undefined;
+
+    if (url) {
+        context = `
+        Target Website/Documentation URL: ${url}
+        Additional User Notes: "${description}"
+        
+        INSTRUCTION: 
+        1. Use Google Search to analyze the content of the provided URL. 
+        2. Identify API endpoints, data models, and structures described on that page.
+        3. Create an OpenAPI specification that mirrors the API found at that URL.
+        `;
+        tools = [{ googleSearch: {} }];
+    }
 
     const prompt = `
     You are an expert Software Architect specializing in OpenAPI (Swagger) specifications.
     
-    Task: Create a complete, valid OpenAPI 3.0 YAML specification based on the user's description.
+    Task: Create a complete, valid OpenAPI 3.0 YAML specification based on the provided context.
     
-    User Description: "${description}"
+    Context:
+    ${context}
     
     Requirements:
     1. Output ONLY valid YAML. No markdown backticks.
     2. Include descriptive summaries for endpoints.
     3. Define proper schemas in the components section.
-    4. Ensure the spec is realistic, follows best practices, and matches the user's intent.
-    5. Include a 'servers' block with a placeholder URL.
+    4. Ensure the spec is realistic, follows best practices, and matches the user's intent or the provided URL's content.
+    5. Include a 'servers' block with a placeholder URL or the actual URL if found.
+    `;
+
+    try {
+        const response = await client.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                tools: tools,
+            }
+        });
+        return response.text?.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '') || "# Error generating spec";
+    } catch (error) {
+        return `# Error: ${error}`;
+    }
+};
+
+export const generateLoadTestScript = async (
+    specYaml: string,
+    language: 'k6' | 'locust' | 'gatling'
+): Promise<string> => {
+    const client = getClient();
+    if (!client) return "// Error: API Key missing";
+
+    const prompt = `
+    You are a Performance Testing Expert.
+    
+    Task: Generate a load testing script for the provided OpenAPI API.
+    Target Framework: ${language === 'k6' ? 'K6 (JavaScript)' : language === 'locust' ? 'Locust (Python)' : 'Gatling (Java/Scala)'}
+    
+    OpenAPI Spec:
+    ${specYaml.substring(0, 15000)} ... (truncated if too long)
+    
+    Requirements:
+    1. Create a script that hits the main GET endpoints and simulated POST endpoints if possible.
+    2. Define a realistic load profile (users, ramp up).
+    3. Include comments explaining how to run it.
+    4. Output ONLY the code (no markdown backticks).
     `;
 
     try {
@@ -197,8 +286,36 @@ export const generateSpecFromPrompt = async (description: string): Promise<strin
             model: 'gemini-2.5-flash',
             contents: prompt,
         });
-        return response.text?.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '') || "# Error generating spec";
+        return response.text?.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '') || "// Error generating script";
     } catch (error) {
-        return `# Error: ${error}`;
+        return `// Error: ${error}`;
+    }
+};
+
+export const detectMessagingPattern = async (spec: OpenAPISpec): Promise<{ path: string, method: string, inputField: string, outputField: string } | null> => {
+    const client = getClient();
+    if (!client) return null;
+
+    const specSummary = Object.entries(spec.paths).map(([path, methods]) => ({ path, methods: Object.keys(methods || {}) }));
+
+    const prompt = `
+    Analyze the following API structure and identify the best endpoint for simulating a "Chat Message" interaction (sending a message to a bot/user).
+    
+    Endpoints: ${JSON.stringify(specSummary)}
+    
+    Task:
+    1. Return JSON with keys: "path", "method", "inputField" (body param name for message text), "outputField" (response param name for reply text).
+    2. If no obvious chat endpoint exists, choose the most relevant generic creation endpoint (e.g., POST /items) and use 'name' or 'description' as fields.
+    `;
+
+    try {
+        const response = await client.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: { responseMimeType: 'application/json' }
+        });
+        return JSON.parse(response.text || "null");
+    } catch (e) {
+        return null;
     }
 };

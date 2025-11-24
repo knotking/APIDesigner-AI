@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, Loader2, Code2 } from 'lucide-react';
-import { generateMCPCode } from '../services/geminiService';
+import { X, Copy, Check, Loader2, Code2, Server, Terminal, Box } from 'lucide-react';
+import { generateCodeArtifact, ArtifactType, Language } from '../services/geminiService';
 
 interface MCPGeneratorProps {
   specYaml: string;
@@ -9,7 +9,8 @@ interface MCPGeneratorProps {
 }
 
 export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, onClose }) => {
-  const [language, setLanguage] = useState<'python' | 'java' | 'go'>('python');
+  const [language, setLanguage] = useState<Language>('python');
+  const [artifactType, setArtifactType] = useState<ArtifactType>('mcp-server');
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -19,7 +20,7 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
   const handleGenerate = async () => {
     setLoading(true);
     setGeneratedCode('');
-    const code = await generateMCPCode(specYaml, language);
+    const code = await generateCodeArtifact(specYaml, language, artifactType);
     setGeneratedCode(code);
     setLoading(false);
   };
@@ -30,19 +31,28 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const languages: { id: Language; label: string }[] = [
+    { id: 'python', label: 'Python' },
+    { id: 'java', label: 'Java' },
+    { id: 'typescript', label: 'TypeScript' },
+    { id: 'csharp', label: 'C# (.NET)' },
+    { id: 'go', label: 'Go' },
+    { id: 'cpp', label: 'C++' },
+  ];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-4xl h-[85vh] flex flex-col shadow-2xl">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         
         {/* Header */}
-        <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+        <div className="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900">
           <div className="flex items-center gap-3">
             <div className="bg-indigo-500/10 p-2 rounded-lg">
                 <Code2 className="w-6 h-6 text-indigo-400" />
             </div>
             <div>
-                <h2 className="text-lg font-bold text-slate-100">MCP Server Generator</h2>
-                <p className="text-xs text-slate-400">Generate a Model Context Protocol server for this API</p>
+                <h2 className="text-lg font-bold text-slate-100">Code Generator</h2>
+                <p className="text-xs text-slate-400">Generate Servers, Clients, and MCP Implementations</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors">
@@ -50,71 +60,122 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
           </button>
         </div>
 
-        {/* Controls */}
-        <div className="p-6 bg-slate-900 grid grid-cols-1 md:grid-cols-3 gap-6 items-end border-b border-slate-800">
-            <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-300">Target Language</label>
-                <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800">
-                    {(['python', 'java', 'go'] as const).map((lang) => (
+        {/* Configuration */}
+        <div className="p-6 bg-slate-950 border-b border-slate-800 grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            {/* Artifact Type Selection */}
+            <div className="lg:col-span-4 flex flex-col gap-3">
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Artifact Type</label>
+                <div className="flex flex-col gap-2">
+                    <button
+                        onClick={() => setArtifactType('mcp-server')}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
+                            artifactType === 'mcp-server' 
+                            ? 'bg-indigo-600/10 border-indigo-500 text-indigo-300' 
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                        }`}
+                    >
+                        <Box className="w-5 h-5 shrink-0" />
+                        <div>
+                            <div className="text-sm font-semibold">MCP Server</div>
+                            <div className="text-[10px] opacity-70">AI Agent Context Protocol</div>
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => setArtifactType('api-client')}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
+                            artifactType === 'api-client' 
+                            ? 'bg-emerald-600/10 border-emerald-500 text-emerald-300' 
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                        }`}
+                    >
+                        <Terminal className="w-5 h-5 shrink-0" />
+                        <div>
+                            <div className="text-sm font-semibold">API Client SDK</div>
+                            <div className="text-[10px] opacity-70">Reusable consumer library</div>
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => setArtifactType('api-server')}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
+                            artifactType === 'api-server' 
+                            ? 'bg-rose-600/10 border-rose-500 text-rose-300' 
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                        }`}
+                    >
+                        <Server className="w-5 h-5 shrink-0" />
+                        <div>
+                            <div className="text-sm font-semibold">API Server Stub</div>
+                            <div className="text-[10px] opacity-70">Implementation Skeleton</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            {/* Language Selection */}
+            <div className="lg:col-span-8 flex flex-col gap-3">
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Target Language</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {languages.map((lang) => (
                         <button
-                            key={lang}
-                            onClick={() => setLanguage(lang)}
-                            className={`flex-1 py-2 text-sm font-medium rounded-md capitalize transition-all ${
-                                language === lang 
-                                ? 'bg-indigo-600 text-white shadow-lg' 
-                                : 'text-slate-400 hover:text-slate-200'
+                            key={lang.id}
+                            onClick={() => setLanguage(lang.id)}
+                            className={`py-3 px-4 text-sm font-medium rounded-lg border transition-all flex items-center justify-center gap-2 ${
+                                language === lang.id
+                                ? 'bg-slate-800 text-white border-slate-600 shadow-md' 
+                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'
                             }`}
                         >
-                            {lang}
+                            {lang.label}
                         </button>
                     ))}
                 </div>
-            </div>
-            
-            <div className="flex flex-col gap-2">
-                 <div className="text-sm text-slate-500">
-                    Generates a standalone server implementing standard MCP tools for all endpoints.
-                 </div>
-            </div>
-
-            <div>
-                <button
-                    onClick={handleGenerate}
-                    disabled={loading}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Code2 className="w-5 h-5" />}
-                    {loading ? 'Generating Code...' : 'Generate Server Code'}
-                </button>
+                
+                <div className="mt-auto pt-4">
+                     <button
+                        onClick={handleGenerate}
+                        disabled={loading}
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-900/20"
+                    >
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Code2 className="w-5 h-5" />}
+                        {loading ? 'Generating...' : `Generate ${artifactType === 'mcp-server' ? 'MCP Server' : artifactType === 'api-client' ? 'Client SDK' : 'Server Stub'}`}
+                    </button>
+                </div>
             </div>
         </div>
 
         {/* Code Output */}
-        <div className="flex-1 overflow-hidden relative bg-slate-950">
-            {generatedCode ? (
-                <div className="h-full flex flex-col">
-                    <div className="absolute top-4 right-4 z-10">
-                         <button 
-                            onClick={handleCopy}
-                            className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-1.5 px-3 rounded-md flex items-center gap-2 border border-slate-700 transition-colors"
-                         >
-                            {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                            {copied ? 'Copied!' : 'Copy Code'}
-                         </button>
-                    </div>
-                    <pre className="h-full overflow-auto p-6 text-xs font-mono text-slate-300 leading-relaxed">
+        <div className="flex-1 overflow-hidden relative bg-slate-950 flex flex-col">
+            <div className="bg-slate-900/50 border-b border-slate-800 px-6 py-2 flex justify-between items-center">
+                <span className="text-xs text-slate-500 font-mono">
+                    {generatedCode ? 'generation_complete.ts' : 'Waiting for generation...'}
+                </span>
+                {generatedCode && (
+                     <button 
+                        onClick={handleCopy}
+                        className="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors"
+                     >
+                        {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        {copied ? 'Copied' : 'Copy'}
+                     </button>
+                )}
+            </div>
+            
+            <div className="flex-1 overflow-auto p-6 relative">
+                 {generatedCode ? (
+                    <pre className="text-xs font-mono text-slate-300 leading-relaxed tab-size-2">
                         {generatedCode}
                     </pre>
-                </div>
-            ) : (
-                <div className="h-full flex flex-col items-center justify-center text-slate-600 p-6 text-center">
-                    <Code2 className="w-16 h-16 mb-4 opacity-20" />
-                    <p className="text-sm">Select a language and click generate to create your MCP server.</p>
-                    <p className="text-xs mt-2 max-w-md text-slate-500">
-                        The generated code maps your OpenAPI operations to MCP tools, ready for use with MCP clients like Claude Desktop or IDEs.
-                    </p>
-                </div>
-            )}
+                 ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-slate-700">
+                        <Code2 className="w-16 h-16 mb-4 opacity-10" />
+                        <p className="text-sm font-medium">Ready to generate code</p>
+                        <p className="text-xs opacity-60 mt-1 max-w-xs text-center">
+                            Select your artifact type and language above, then click generate to create a ready-to-use implementation.
+                        </p>
+                    </div>
+                 )}
+            </div>
         </div>
       </div>
     </div>

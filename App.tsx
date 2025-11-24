@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DEFAULT_SPEC_YAML } from './constants';
 import { OpenAPISpec, LogEntry } from './types';
 import { SpecEditor } from './components/SpecEditor';
@@ -7,8 +7,10 @@ import { TestConsole } from './components/TestConsole';
 import { ResponseViewer } from './components/ResponseViewer';
 import { MCPGenerator } from './components/MCPGenerator';
 import { SpecGeneratorModal } from './components/SpecGeneratorModal';
+import { LoadTestGenerator } from './components/LoadTestGenerator';
+import { MessagingSimulator } from './components/MessagingSimulator';
 import { generateMockResponse, MockGenOptions } from './services/geminiService';
-import { Braces, PlayCircle, Code2, Menu } from 'lucide-react';
+import { Braces, Menu, Zap, MessageSquare, ChevronDown, TestTube2, Code2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [rawSpec, setRawSpec] = useState<string>(DEFAULT_SPEC_YAML);
@@ -23,6 +25,11 @@ const App: React.FC = () => {
 
   const [isMCPOpen, setIsMCPOpen] = useState(false);
   const [isSpecGenOpen, setIsSpecGenOpen] = useState(false);
+  const [isLoadGenOpen, setIsLoadGenOpen] = useState(false);
+  const [isMsgSimOpen, setIsMsgSimOpen] = useState(false);
+  
+  const [isTestingMenuOpen, setIsTestingMenuOpen] = useState(false);
+  const testingMenuRef = useRef<HTMLDivElement>(null);
 
   // Parse YAML on change
   useEffect(() => {
@@ -49,6 +56,17 @@ const App: React.FC = () => {
       }
     }
   }, [parsedSpec, selectedPath]);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (testingMenuRef.current && !testingMenuRef.current.contains(event.target as Node)) {
+        setIsTestingMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSelectEndpoint = (path: string, method: string) => {
     setSelectedPath(path);
@@ -107,8 +125,6 @@ const App: React.FC = () => {
     if (parsedSpec?.paths?.[path]?.[method]) {
         setSelectedPath(path);
         setSelectedMethod(method);
-        // Note: In a real app, we might want to auto-fill the form params here too
-        // For now, we just navigate to the endpoint
     } else {
         console.warn(`Auto-select failed: Endpoint ${method} ${path} not found.`);
     }
@@ -147,11 +163,46 @@ const App: React.FC = () => {
                 >
                     <Menu className="w-3.5 h-3.5" /> Spec Generator
                 </button>
+                
+                <div className="w-px h-6 bg-slate-800 mx-1"></div>
+
+                {/* Testing Dropdown */}
+                <div className="relative" ref={testingMenuRef}>
+                    <button 
+                        onClick={() => setIsTestingMenuOpen(!isTestingMenuOpen)}
+                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium border rounded-md transition-all ${isTestingMenuOpen ? 'bg-slate-800 text-white border-slate-600' : 'text-slate-300 bg-slate-900 border-slate-700 hover:bg-slate-800'}`}
+                    >
+                        <TestTube2 className="w-3.5 h-3.5" /> 
+                        Testing Suite
+                        <ChevronDown className={`w-3 h-3 transition-transform ${isTestingMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {isTestingMenuOpen && (
+                        <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 py-1 animate-in fade-in zoom-in-95 duration-150">
+                            <button 
+                                onClick={() => { setIsMsgSimOpen(true); setIsTestingMenuOpen(false); }}
+                                className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-emerald-300 flex items-center gap-2 group"
+                            >
+                                <MessageSquare className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400" />
+                                Messaging Simulator
+                            </button>
+                            <button 
+                                onClick={() => { setIsLoadGenOpen(true); setIsTestingMenuOpen(false); }}
+                                className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-rose-300 flex items-center gap-2 group"
+                            >
+                                <Zap className="w-3.5 h-3.5 text-slate-500 group-hover:text-rose-400" />
+                                Load Generator
+                            </button>
+                        </div>
+                    )}
+                </div>
+
                 <button 
                     onClick={() => setIsMCPOpen(true)}
                     className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-md transition-colors"
+                    title="Generate Clients and Servers"
                 >
-                    <Code2 className="w-3.5 h-3.5" /> Generate MCP Server
+                    <Code2 className="w-3.5 h-3.5" /> Code Generator
                 </button>
             </div>
         </div>
@@ -192,6 +243,18 @@ const App: React.FC = () => {
         specYaml={rawSpec} 
         isOpen={isMCPOpen} 
         onClose={() => setIsMCPOpen(false)} 
+      />
+
+      <LoadTestGenerator
+        specYaml={rawSpec}
+        isOpen={isLoadGenOpen}
+        onClose={() => setIsLoadGenOpen(false)}
+      />
+      
+      <MessagingSimulator
+        spec={parsedSpec}
+        isOpen={isMsgSimOpen}
+        onClose={() => setIsMsgSimOpen(false)}
       />
 
       <SpecGeneratorModal
