@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Copy, Check, Loader2, Code2, Server, Terminal, Box } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Copy, Check, Loader2, Code2, Server, Terminal, Box, FileText } from 'lucide-react';
 import { generateCodeArtifact, ArtifactType, Language } from '../services/geminiService';
 
 interface MCPGeneratorProps {
@@ -9,11 +9,22 @@ interface MCPGeneratorProps {
 }
 
 export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, onClose }) => {
-  const [language, setLanguage] = useState<Language>('python');
   const [artifactType, setArtifactType] = useState<ArtifactType>('mcp-server');
+  // Default to python for code, or markdown for docs
+  const [language, setLanguage] = useState<Language>('python');
+  
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Reset language when type changes to ensure valid selection
+  useEffect(() => {
+    if (artifactType === 'documentation') {
+        setLanguage('markdown');
+    } else {
+        setLanguage('python');
+    }
+  }, [artifactType]);
 
   if (!isOpen) return null;
 
@@ -31,14 +42,25 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const languages: { id: Language; label: string }[] = [
-    { id: 'python', label: 'Python' },
-    { id: 'java', label: 'Java' },
-    { id: 'typescript', label: 'TypeScript' },
-    { id: 'csharp', label: 'C# (.NET)' },
-    { id: 'go', label: 'Go' },
-    { id: 'cpp', label: 'C++' },
-  ];
+  const getLanguagesForArtifact = (type: ArtifactType): { id: Language; label: string }[] => {
+      if (type === 'documentation') {
+          return [
+              { id: 'markdown', label: 'Markdown' },
+              { id: 'html', label: 'HTML (Single Page)' },
+              { id: 'asciidoc', label: 'AsciiDoc' },
+          ];
+      }
+      return [
+        { id: 'python', label: 'Python' },
+        { id: 'java', label: 'Java' },
+        { id: 'typescript', label: 'TypeScript' },
+        { id: 'csharp', label: 'C# (.NET)' },
+        { id: 'go', label: 'Go' },
+        { id: 'cpp', label: 'C++' },
+      ];
+  };
+
+  const languages = getLanguagesForArtifact(artifactType);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
@@ -51,8 +73,8 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
                 <Code2 className="w-6 h-6 text-indigo-400" />
             </div>
             <div>
-                <h2 className="text-lg font-bold text-slate-100">Code Generator</h2>
-                <p className="text-xs text-slate-400">Generate Servers, Clients, and MCP Implementations</p>
+                <h2 className="text-lg font-bold text-slate-100">Generator</h2>
+                <p className="text-xs text-slate-400">Generate Servers, Clients, Documentation, and MCP Agents</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors">
@@ -109,12 +131,28 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
                             <div className="text-[10px] opacity-70">Implementation Skeleton</div>
                         </div>
                     </button>
+                    <button
+                        onClick={() => setArtifactType('documentation')}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
+                            artifactType === 'documentation' 
+                            ? 'bg-amber-600/10 border-amber-500 text-amber-300' 
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                        }`}
+                    >
+                        <FileText className="w-5 h-5 shrink-0" />
+                        <div>
+                            <div className="text-sm font-semibold">Documentation</div>
+                            <div className="text-[10px] opacity-70">Readable API Reference</div>
+                        </div>
+                    </button>
                 </div>
             </div>
 
             {/* Language Selection */}
             <div className="lg:col-span-8 flex flex-col gap-3">
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Target Language</label>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    {artifactType === 'documentation' ? 'Output Format' : 'Target Language'}
+                </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {languages.map((lang) => (
                         <button
@@ -138,7 +176,7 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
                         className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-900/20"
                     >
                         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Code2 className="w-5 h-5" />}
-                        {loading ? 'Generating...' : `Generate ${artifactType === 'mcp-server' ? 'MCP Server' : artifactType === 'api-client' ? 'Client SDK' : 'Server Stub'}`}
+                        {loading ? 'Generating...' : `Generate ${artifactType === 'mcp-server' ? 'MCP Server' : artifactType === 'api-client' ? 'Client SDK' : artifactType === 'api-server' ? 'Server Stub' : 'Docs'}`}
                     </button>
                 </div>
             </div>
@@ -148,7 +186,7 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
         <div className="flex-1 overflow-hidden relative bg-slate-950 flex flex-col">
             <div className="bg-slate-900/50 border-b border-slate-800 px-6 py-2 flex justify-between items-center">
                 <span className="text-xs text-slate-500 font-mono">
-                    {generatedCode ? 'generation_complete.ts' : 'Waiting for generation...'}
+                    {generatedCode ? 'generation_complete' : 'Waiting for generation...'}
                 </span>
                 {generatedCode && (
                      <button 
@@ -169,9 +207,9 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
                  ) : (
                     <div className="h-full flex flex-col items-center justify-center text-slate-700">
                         <Code2 className="w-16 h-16 mb-4 opacity-10" />
-                        <p className="text-sm font-medium">Ready to generate code</p>
+                        <p className="text-sm font-medium">Ready to generate</p>
                         <p className="text-xs opacity-60 mt-1 max-w-xs text-center">
-                            Select your artifact type and language above, then click generate to create a ready-to-use implementation.
+                            Select your artifact type and options above, then click generate.
                         </p>
                     </div>
                  )}

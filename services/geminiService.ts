@@ -15,8 +15,8 @@ export interface MockGenOptions {
     exampleValues?: Record<string, any>;
 }
 
-export type ArtifactType = 'mcp-server' | 'api-client' | 'api-server';
-export type Language = 'python' | 'java' | 'go' | 'csharp' | 'typescript' | 'cpp';
+export type ArtifactType = 'mcp-server' | 'api-client' | 'api-server' | 'documentation';
+export type Language = 'python' | 'java' | 'go' | 'csharp' | 'typescript' | 'cpp' | 'markdown' | 'html' | 'asciidoc';
 
 export const generateMockResponse = async (
     operationId: string,
@@ -122,22 +122,32 @@ export const generateCodeArtifact = async (
             - Framework suggestions: Spring Boot (Java), FastAPI (Python), Gin (Go), ASP.NET Core (C#), Express/NestJS (TypeScript), Crow/Drogon (C++).
             `;
             break;
+        case 'documentation':
+            typeDescription = "API Documentation";
+            specifics = `
+            - Generate comprehensive API documentation in ${language === 'markdown' ? 'Markdown' : language === 'html' ? 'Single-Page HTML' : 'AsciiDoc'} format.
+            - Include an overview, authentication details, and detailed sections for each endpoint.
+            - List parameters, request bodies, and response schemas with examples.
+            - For HTML: Use a modern, clean, responsive design with embedded CSS. Do not rely on external CDN links that might break.
+            - For Markdown: Use standard GFM syntax with tables for parameters.
+            `;
+            break;
     }
 
     const prompt = `
     You are an expert developer specializing in API tooling.
     
-    Task: Generate a complete, runnable ${typeDescription} for the following OpenAPI specification.
-    Target Language: ${language}
+    Task: Generate a complete ${typeDescription} for the following OpenAPI specification.
+    Target Language/Format: ${language}
     
     OpenAPI Spec:
     ${specYaml}
     
     Requirements:
-    1. Output ONLY the code (no markdown backticks).
+    1. Output ONLY the code/text (no markdown backticks or explanation wrapping the output).
     2. Include necessary imports and a main entry point if applicable.
     3. Add clear comments explaining the code structure.
-    4. Code should be idiomatic and follow best practices for ${language}.
+    4. Code/Docs should be idiomatic and follow best practices.
     
     Specific Requirements for ${typeDescription}:
     ${specifics}
