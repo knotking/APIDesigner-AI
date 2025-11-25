@@ -60,22 +60,27 @@ export const generateMockResponse = async (
     }
 
     const prompt = `
-    You are a Virtual API Backend. 
-    Your task is to generate a SINGLE, valid JSON response object based on the provided OpenAPI Schema and User Context.
+    You are a Virtual API Backend Logic Engine. 
+    Your task is to generate a SINGLE, valid JSON response object that faithfully simulates a real backend processing the User Input.
     
     Operation ID: ${operationId}
-    User Input Parameters: ${JSON.stringify(userParams)}
+    
+    SIMULATION CONTEXT (User Input):
+    ${JSON.stringify(userParams, null, 2)}
     
     ${exampleContext}
     
     Response Schema:
     ${JSON.stringify(schema, null, 2)}
     
-    Rules:
-    1. Output strictly valid JSON. No markdown code blocks.
-    2. Variation Style: ${isCreative ? 'CREATIVE. Generate diverse, realistic, and interesting data (e.g., vary names, use realistic descriptions, believable timestamps).' : 'STRICT. Generate standard, predictable data adhering strictly to types. Use generic values (e.g., "string", 0) unless specific formats require otherwise.'}
-    3. If an array is requested, generate ${isCreative ? '3-5' : '1-2'} items.
-    4. Respect the 'User Input Parameters' if they influence the output (e.g., if user asks for id=123, return object with id=123).
+    Rules for Behavior Simulation:
+    1. **LOGIC MATTERS**: If the User Input contains parameters like 'limit', 'count', 'id', 'status', 'role', etc., your response MUST reflect them.
+       - Example: If 'limit=5', return exactly 5 items in the array.
+       - Example: If 'id=123', the returned object id MUST be 123.
+       - Example: If 'status=active', the returned object status MUST be 'active'.
+    2. **VALID JSON**: Output strictly valid JSON. No markdown code blocks.
+    3. **VARIATION**: ${isCreative ? 'CREATIVE. Generate diverse, realistic, and interesting data (e.g., vary names, use realistic descriptions, believable timestamps).' : 'STRICT. Generate standard, predictable data adhering strictly to types. Use generic values (e.g., "string", 0) unless specific formats require otherwise.'}
+    4. If the schema is an array and no limit is specified, generate ${isCreative ? '3-5' : '1-2'} items.
     `;
 
     try {
@@ -389,6 +394,4 @@ export const analyzeSpec = async (specYaml: string): Promise<AnalysisReport> => 
         });
         return JSON.parse(response.text || '{"score": 0, "summary": "Failed to parse", "issues": []}');
     } catch (error) {
-        return { score: 0, summary: "Analysis Failed", issues: [{ severity: 'critical', category: 'correctness', message: String(error) }] };
-    }
-};
+        return { score: 0, summary: "Analysis Failed",

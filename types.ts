@@ -54,6 +54,7 @@ export interface Parameter {
   required?: boolean;
   schema?: any;
   type?: string; // Swagger 2.0 compat
+  example?: any; // Added for mock data generation
 }
 
 export interface LogEntry {
