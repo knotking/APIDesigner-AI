@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Operation, Parameter, OpenAPISpec } from '../types';
-import { Play, Loader2, Sparkles, Settings2, ChevronDown, X, MessageSquare, Bot, Wand2 } from 'lucide-react';
+import { Play, Loader2, Sparkles, Settings2, ChevronDown, X, MessageSquare, Bot, Wand2, FileUp, Paperclip, FileJson, Layers } from 'lucide-react';
 import { AgentChat } from './AgentChat';
 import { MockGenOptions } from '../services/geminiService';
 
@@ -26,6 +26,7 @@ const getMockValue = (schema: any, example?: any, name?: string): any => {
     if (type === 'boolean') return true;
     if (type === 'array') return [];
     if (type === 'string') {
+        if (schema?.format === 'binary') return { name: 'mock_file.png', size: 1024, type: 'image/png', _isMockFile: true };
         if (schema?.enum && schema.enum.length > 0) return schema.enum[0];
         if (schema?.format === 'date-time') return new Date().toISOString();
         if (schema?.format === 'email') return 'user@example.com';
@@ -67,6 +68,11 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
   const [jsonBody, setJsonBody] = useState<string>('{\n  \n}');
   const [activeTab, setActiveTab] = useState<'params' | 'body' | 'nlp'>('params');
   
+  // Body Content Type State
+  const contentTypes = operation.requestBody?.content ? Object.keys(operation.requestBody.content) : [];
+  const [selectedContentType, setSelectedContentType] = useState<string>('');
+  const [multipartFields, setMultipartFields] = useState<Record<string, any>>({});
+
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
   const [variationLevel, setVariationLevel] = useState<'strict' | 'creative'>('strict');
@@ -86,19 +92,23 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Reset and Auto-fill params when endpoint changes
+  // Reset and Auto-fill params/body when endpoint changes
   useEffect(() => {
     const initialParams: Record<string, string> = {};
     operation.parameters?.forEach(p => {
-        // Auto-fill if example exists
         const val = getMockValue(p.schema, p.example, p.name);
-        initialParams[p.name] = val !== '' ? String(val) : '';
+        initialParams[p.name] = val !== '' && typeof val !== 'object' ? String(val) : '';
     });
     setParams(initialParams);
     setJsonBody('{\n  \n}');
+    setMultipartFields({});
     
+    // Set default content type
+    const types = operation.requestBody?.content ? Object.keys(operation.requestBody.content) : [];
+    const defaultType = types.includes('application/json') ? 'application/json' : types[0] || '';
+    setSelectedContentType(defaultType);
+
     if (activeTab !== 'nlp') {
-        // Auto-switch to body tab if it's a POST/PUT
         if (['post', 'put', 'patch'].includes(method.toLowerCase())) {
             setActiveTab('body');
         } else {
@@ -111,33 +121,51 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
     setParams(prev => ({ ...prev, [key]: value }));
   };
 
+  const handleMultipartChange = (key: string, value: any) => {
+      setMultipartFields(prev => ({ ...prev, [key]: value }));
+  };
+
   const handleMagicFill = () => {
       // 1. Fill Params
       const newParams = { ...params };
       operation.parameters?.forEach(p => {
           if (!newParams[p.name]) {
-              newParams[p.name] = String(getMockValue(p.schema, p.example, p.name));
+              const val = getMockValue(p.schema, p.example, p.name);
+              if (typeof val !== 'object') newParams[p.name] = String(val);
           }
       });
       setParams(newParams);
 
-      // 2. Fill Body if applicable
+      // 2. Fill Body
       if (operation.requestBody) {
-          const content = operation.requestBody.content?.['application/json'];
-          if (content?.schema) {
-              const mockBody = generateMockBody(content.schema);
-              setJsonBody(JSON.stringify(mockBody, null, 2));
+          const schema = operation.requestBody.content?.[selectedContentType]?.schema;
+          if (schema) {
+              if (selectedContentType === 'application/json') {
+                  const mockBody = generateMockBody(schema);
+                  setJsonBody(JSON.stringify(mockBody, null, 2));
+              } else if (selectedContentType.includes('multipart') || selectedContentType.includes('form')) {
+                  // Generate flat object for multipart
+                  const mockData = generateMockBody(schema);
+                  setMultipartFields(mockData);
+              }
           }
       }
   };
 
   const handleRun = () => {
-    let parsedBody = null;
+    let finalBody = null;
+
+    // Handle Body Processing based on Content-Type
     if (activeTab === 'body' || ['post', 'put', 'patch'].includes(method.toLowerCase())) {
-        try {
-            parsedBody = JSON.parse(jsonBody);
-        } catch (e) {
-            // Allow empty body if simple request
+        if (selectedContentType === 'application/json') {
+            try {
+                finalBody = JSON.parse(jsonBody);
+            } catch (e) {
+                // Allow empty/invalid body, agent might handle it
+            }
+        } else if (selectedContentType.includes('multipart') || selectedContentType.includes('form')) {
+            // Pass the multipart fields map directly
+            finalBody = { ...multipartFields, _contentType: selectedContentType };
         }
     }
 
@@ -150,7 +178,7 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
         console.warn("Invalid example values JSON");
     }
 
-    onExecute({ ...params, _body: parsedBody }, {
+    onExecute({ ...params, _body: finalBody }, {
         variationLevel,
         exampleValues: parsedExamples,
         arrayItemCount: arrayItemCount ? parseInt(arrayItemCount) : undefined
@@ -159,6 +187,9 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
 
   const allParams = operation.parameters || [];
   const hasBody = operation.requestBody !== undefined;
+  
+  // Get schema for current content type to render form
+  const currentBodySchema = operation.requestBody?.content?.[selectedContentType]?.schema;
 
   return (
     <div className="flex flex-col h-full bg-slate-950 relative">
@@ -205,6 +236,27 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
             >
                 <Wand2 className="w-3 h-3" /> Magic Fill
             </button>
+            
+            {activeTab === 'body' && contentTypes.length > 1 && (
+                <div className="relative group">
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-medium rounded border border-slate-700 transition-colors">
+                        {selectedContentType === 'application/json' ? <FileJson className="w-3 h-3 text-emerald-400" /> : <Layers className="w-3 h-3 text-orange-400" />}
+                        {selectedContentType}
+                        <ChevronDown className="w-3 h-3" />
+                    </button>
+                    <div className="absolute top-full left-0 mt-1 w-48 bg-slate-900 border border-slate-800 rounded-lg shadow-xl z-20 overflow-hidden hidden group-hover:block">
+                        {contentTypes.map(ct => (
+                            <button 
+                                key={ct}
+                                onClick={() => setSelectedContentType(ct)}
+                                className={`w-full text-left px-3 py-2 text-xs hover:bg-slate-800 ${ct === selectedContentType ? 'text-indigo-400 bg-slate-800/50' : 'text-slate-400'}`}
+                            >
+                                {ct}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
         
         <div className="flex items-center gap-3 relative">
@@ -314,15 +366,86 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
 
         {activeTab === 'body' && (
             <div className="h-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <textarea
-                    value={jsonBody}
-                    onChange={(e) => setJsonBody(e.target.value)}
-                    className="flex-1 w-full bg-slate-900 border border-slate-800 rounded-lg p-4 font-mono text-sm text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed"
-                    spellCheck={false}
-                />
-                <div className="mt-2 text-xs text-slate-500">
-                    Supports valid JSON. Used for POST/PUT requests.
-                </div>
+                {selectedContentType === 'application/json' ? (
+                     <>
+                        <textarea
+                            value={jsonBody}
+                            onChange={(e) => setJsonBody(e.target.value)}
+                            className="flex-1 w-full bg-slate-900 border border-slate-800 rounded-lg p-4 font-mono text-sm text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed"
+                            spellCheck={false}
+                        />
+                        <div className="mt-2 text-xs text-slate-500">
+                            Supports valid JSON. Used for POST/PUT requests.
+                        </div>
+                    </>
+                ) : (
+                    <div className="space-y-4 max-w-2xl">
+                        <div className="text-xs text-slate-400 font-medium mb-2 uppercase tracking-wider flex items-center gap-2">
+                             <Layers className="w-4 h-4" /> {selectedContentType}
+                        </div>
+                        {currentBodySchema?.properties ? (
+                            Object.entries(currentBodySchema.properties).map(([key, propSchema]: [string, any]) => {
+                                const isBinary = propSchema.type === 'string' && (propSchema.format === 'binary' || propSchema.format === 'byte' || key.toLowerCase().includes('file'));
+                                
+                                return (
+                                    <div key={key} className="group">
+                                        <label className="block text-xs font-medium text-slate-400 mb-1">
+                                            {key}
+                                            {currentBodySchema.required?.includes(key) && <span className="text-rose-400 ml-1">*</span>}
+                                        </label>
+                                        
+                                        {isBinary ? (
+                                             <div className="flex items-center gap-3">
+                                                <div className="relative flex-1">
+                                                    <input 
+                                                        type="file" 
+                                                        id={`file-${key}`}
+                                                        className="hidden" 
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (file) {
+                                                                handleMultipartChange(key, { name: file.name, size: file.size, type: file.type, _isMockFile: false });
+                                                            }
+                                                        }}
+                                                    />
+                                                    <div className="flex bg-slate-900 border border-slate-800 rounded-md py-2 px-3 items-center justify-between">
+                                                        <span className="text-sm text-slate-300 truncate">
+                                                            {multipartFields[key]?.name || <span className="text-slate-600 italic">No file selected</span>}
+                                                        </span>
+                                                        <label 
+                                                            htmlFor={`file-${key}`}
+                                                            className="flex items-center gap-1.5 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded cursor-pointer transition-colors border border-slate-700"
+                                                        >
+                                                            <Paperclip className="w-3 h-3" /> Browse
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                {multipartFields[key]?._isMockFile && (
+                                                    <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded">Mock</span>
+                                                )}
+                                             </div>
+                                        ) : (
+                                            <input
+                                                type="text"
+                                                value={multipartFields[key] || ''}
+                                                onChange={(e) => handleMultipartChange(key, e.target.value)}
+                                                placeholder={`Value for ${key}`}
+                                                className="w-full bg-slate-900 border border-slate-800 rounded-md py-2 px-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
+                                            />
+                                        )}
+                                        <div className="mt-1 text-[10px] text-slate-600">
+                                            {isBinary ? 'Simulates file upload logic (Agent receives metadata).' : 'Form field value.'}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                             <div className="text-sm text-slate-500 p-4 border border-dashed border-slate-800 rounded">
+                                No properties defined in schema for {selectedContentType}.
+                             </div>
+                        )}
+                    </div>
+                )}
             </div>
         )}
 

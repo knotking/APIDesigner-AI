@@ -88,6 +88,30 @@ The layout consists of three panes:
 3.  Select the Target Language.
 4.  Click **Generate** and copy the code.
 
+## 📅 History of Development
+
+*   **v1.2.0 (Current)** - *The Agentic Era*
+    *   Added **Messaging Simulator** for testing chat bots.
+    *   Introduced **File Upload Simulation** for multipart requests.
+    *   Enhanced **Search Grounding** for URL-to-Spec generation.
+    *   Added **Load Test Script Generator** (k6, Locust, Gatling).
+
+*   **v1.1.0** - *Code & Artifacts*
+    *   Launched the **MCP Server Generator** to bridge APIs with AI Agents.
+    *   Added multi-language client SDK generation.
+    *   Implemented PDF export for Audit Reports.
+
+*   **v1.0.0** - *The AI Core*
+    *   Initial release of **MockAPI Studio**.
+    *   Integrated Google Gemini `gemini-2.5-flash` for logic simulation.
+    *   Built the "Virtual Backend" capable of understanding parameters like `limit` and `id`.
+    *   Added the **AI Auditor** for security and best practices.
+
+*   **v0.5.0 (Beta)**
+    *   Basic YAML editor with `js-yaml` validation.
+    *   Simple request/response viewer.
+    *   Static mock data generation based on schema types.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
