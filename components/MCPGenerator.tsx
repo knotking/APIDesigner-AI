@@ -6,9 +6,10 @@ interface MCPGeneratorProps {
   specYaml: string;
   isOpen: boolean;
   onClose: () => void;
+  onLogHistory: (category: string, details: string) => void;
 }
 
-export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, onClose }) => {
+export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, onClose, onLogHistory }) => {
   const [artifactType, setArtifactType] = useState<ArtifactType>('mcp-server');
   // Default to python for code, or markdown for docs
   const [language, setLanguage] = useState<Language>('python');
@@ -34,6 +35,11 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
     const code = await generateCodeArtifact(specYaml, language, artifactType);
     setGeneratedCode(code);
     setLoading(false);
+    
+    // Log success
+    if (code && !code.startsWith('// Error')) {
+        onLogHistory('code_gen', `Generated ${artifactType} in ${language}`);
+    }
   };
 
   const handleCopy = () => {

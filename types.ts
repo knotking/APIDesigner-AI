@@ -1,3 +1,4 @@
+
 export interface OpenAPISpec {
   openapi: string;
   info: {
@@ -69,6 +70,16 @@ export interface LogEntry {
     body?: any;
   };
   response: any;
+}
+
+export type HistoryCategory = 'api_call' | 'spec_gen' | 'spec_migrate' | 'code_gen' | 'load_gen' | 'audit';
+
+export interface HistoryItem {
+  id: string;
+  timestamp: Date;
+  category: HistoryCategory;
+  summary: string;
+  details?: string;
 }
 
 // Augment window for js-yaml loaded via CDN

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DEFAULT_SPEC_YAML } from './constants';
-import { OpenAPISpec, LogEntry } from './types';
+import { OpenAPISpec, LogEntry, HistoryItem, HistoryCategory } from './types';
 import { SpecEditor } from './components/SpecEditor';
 import { EndpointList } from './components/EndpointList';
 import { TestConsole } from './components/TestConsole';
@@ -12,8 +12,9 @@ import { MessagingSimulator } from './components/MessagingSimulator';
 import { SpecAnalysisModal } from './components/SpecAnalysisModal';
 import { SpecMigratorModal } from './components/SpecMigratorModal';
 import { MockServerModal } from './components/MockServerModal';
+import { HistoryTimeline } from './components/HistoryTimeline';
 import { generateMockResponse, MockGenOptions, analyzeSpec, AnalysisReport } from './services/geminiService';
-import { Braces, Zap, MessageSquare, ChevronDown, Code2, Wand2, Cpu, FileJson, RefreshCw, Database } from 'lucide-react';
+import { Braces, Zap, MessageSquare, ChevronDown, Code2, Wand2, Cpu, FileJson, RefreshCw, Database, Clock } from 'lucide-react';
 
 const App: React.FC = () => {
   const [rawSpec, setRawSpec] = useState<string>(DEFAULT_SPEC_YAML);
@@ -24,6 +25,7 @@ const App: React.FC = () => {
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Modals State
@@ -33,6 +35,7 @@ const App: React.FC = () => {
   const [isMsgSimOpen, setIsMsgSimOpen] = useState(false);
   const [isMigratorOpen, setIsMigratorOpen] = useState(false);
   const [isMockServerOpen, setIsMockServerOpen] = useState(false);
+  const [isTimelineOpen, setIsTimelineOpen] = useState(false);
   
   // Analysis State
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
@@ -86,6 +89,16 @@ const App: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const addToHistory = (category: HistoryCategory, summary: string, details?: string) => {
+      setHistory(prev => [...prev, {
+          id: Date.now().toString() + Math.random(),
+          timestamp: new Date(),
+          category,
+          summary,
+          details
+      }]);
+  };
+
   const handleSelectEndpoint = (path: string, method: string) => {
     setSelectedPath(path);
     setSelectedMethod(method);
@@ -131,6 +144,7 @@ const App: React.FC = () => {
       };
 
       setLogs(prev => [...prev, newLog]);
+      addToHistory('api_call', `${selectedMethod.toUpperCase()} ${selectedPath}`, `Status: ${newLog.status} (${duration}ms)`);
     } catch (error) {
       console.error("Execution failed", error);
     } finally {
@@ -156,6 +170,7 @@ const App: React.FC = () => {
       const report = await analyzeSpec(rawSpec);
       setAnalysisReport(report);
       setIsAnalyzing(false);
+      addToHistory('audit', 'Spec Analysis', `Score: ${report.score}/100`);
   };
 
   // Safe access to active operation
@@ -268,6 +283,17 @@ const App: React.FC = () => {
                     )}
                 </div>
 
+                <div className="w-px h-6 bg-slate-800 mx-1"></div>
+
+                <button 
+                  onClick={() => setIsTimelineOpen(true)}
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors relative"
+                  title="History Timeline"
+                >
+                    <Clock className="w-4 h-4" />
+                    {history.length > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full border border-slate-950"></span>}
+                </button>
+
             </div>
         </div>
 
@@ -304,16 +330,24 @@ const App: React.FC = () => {
       </div>
 
       {/* Modals */}
+      <HistoryTimeline
+        isOpen={isTimelineOpen}
+        onClose={() => setIsTimelineOpen(false)}
+        history={history}
+      />
+
       <MCPGenerator 
         specYaml={rawSpec} 
         isOpen={isMCPOpen} 
         onClose={() => setIsMCPOpen(false)} 
+        onLogHistory={(cat: string, det: string) => addToHistory(cat as any, 'Code Generator', det)}
       />
 
       <LoadTestGenerator
         specYaml={rawSpec}
         isOpen={isLoadGenOpen}
         onClose={() => setIsLoadGenOpen(false)}
+        onLogHistory={(cat: string, det: string) => addToHistory(cat as any, 'Load Test Generator', det)}
       />
       
       <MessagingSimulator
@@ -331,13 +365,19 @@ const App: React.FC = () => {
       <SpecGeneratorModal
         isOpen={isSpecGenOpen}
         onClose={() => setIsSpecGenOpen(false)}
-        onGenerate={(yaml) => setRawSpec(yaml)}
+        onGenerate={(yaml) => {
+            setRawSpec(yaml);
+            addToHistory('spec_gen', 'Generated New Specification');
+        }}
       />
 
       <SpecMigratorModal
         isOpen={isMigratorOpen}
         onClose={() => setIsMigratorOpen(false)}
-        onMigrate={(yaml) => setRawSpec(yaml)}
+        onMigrate={(yaml) => {
+            setRawSpec(yaml);
+            addToHistory('spec_migrate', 'Migrated Specification');
+        }}
       />
 
       <SpecAnalysisModal

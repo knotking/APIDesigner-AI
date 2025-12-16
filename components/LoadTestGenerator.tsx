@@ -6,9 +6,10 @@ interface LoadTestGeneratorProps {
   specYaml: string;
   isOpen: boolean;
   onClose: () => void;
+  onLogHistory: (category: string, details: string) => void;
 }
 
-export const LoadTestGenerator: React.FC<LoadTestGeneratorProps> = ({ specYaml, isOpen, onClose }) => {
+export const LoadTestGenerator: React.FC<LoadTestGeneratorProps> = ({ specYaml, isOpen, onClose, onLogHistory }) => {
   const [language, setLanguage] = useState<'k6' | 'locust' | 'gatling'>('k6');
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -22,6 +23,10 @@ export const LoadTestGenerator: React.FC<LoadTestGeneratorProps> = ({ specYaml, 
     const code = await generateLoadTestScript(specYaml, language);
     setGeneratedCode(code);
     setLoading(false);
+
+    if (code && !code.startsWith('// Error')) {
+        onLogHistory('load_gen', `Generated ${language} script`);
+    }
   };
 
   const handleCopy = () => {

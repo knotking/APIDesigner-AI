@@ -43,6 +43,7 @@ Virtual environments to test your API logic without writing a single line of bac
 ### 3. Analysis & Auditing
 *   **AI Auditor**: Scans your YAML for security holes, logical inconsistencies, and RESTful best practices.
 *   **Reporting**: Generates a detailed Health Score and downloadable PDF reports.
+*   **Usage Timeline**: Tracks all session activities including API calls, spec generations, and migrations in a chronological timeline.
 
 ## 🛠️ Tech Stack
 
@@ -105,7 +106,10 @@ The layout consists of three panes:
 
 ## 📅 History of Development
 
-*   **v1.5.0 (Latest)**
+*   **v1.6.0 (Latest)**
+    *   **Usage Timeline**: Added global history tracking for all user actions.
+    
+*   **v1.5.0**
     *   **Mock Data Explorer**: Replaced code generation with an in-UI data explorer for instant JSON previews.
     
 *   **v1.4.0**
