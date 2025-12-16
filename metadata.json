@@ -1,5 +1,5 @@
 {
-  "name": "MockAPI Studio",
+  "name": "APIGuru",
   "description": "An intelligent OpenAPI Spec designer and virtual testing suite. Paste your spec, and instantly test endpoints against a Gemini-powered virtual backend that generates realistic mock data based on your schemas.",
   "requestFramePermissions": []
 }

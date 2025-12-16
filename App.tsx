@@ -11,7 +11,7 @@ import { LoadTestGenerator } from './components/LoadTestGenerator';
 import { MessagingSimulator } from './components/MessagingSimulator';
 import { SpecAnalysisModal } from './components/SpecAnalysisModal';
 import { generateMockResponse, MockGenOptions, analyzeSpec, AnalysisReport } from './services/geminiService';
-import { Braces, Menu, Zap, MessageSquare, ChevronDown, TestTube2, Code2 } from 'lucide-react';
+import { Braces, Zap, MessageSquare, ChevronDown, Code2, Wand2, Cpu, FileJson } from 'lucide-react';
 
 const App: React.FC = () => {
   const [rawSpec, setRawSpec] = useState<string>(DEFAULT_SPEC_YAML);
@@ -35,8 +35,12 @@ const App: React.FC = () => {
   const [analysisReport, setAnalysisReport] = useState<AnalysisReport | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const [isTestingMenuOpen, setIsTestingMenuOpen] = useState(false);
-  const testingMenuRef = useRef<HTMLDivElement>(null);
+  // Menu States
+  const [isGeneratorMenuOpen, setIsGeneratorMenuOpen] = useState(false);
+  const generatorMenuRef = useRef<HTMLDivElement>(null);
+
+  const [isSimulatorMenuOpen, setIsSimulatorMenuOpen] = useState(false);
+  const simulatorMenuRef = useRef<HTMLDivElement>(null);
 
   // Parse YAML on change
   useEffect(() => {
@@ -67,8 +71,11 @@ const App: React.FC = () => {
   // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (testingMenuRef.current && !testingMenuRef.current.contains(event.target as Node)) {
-        setIsTestingMenuOpen(false);
+      if (generatorMenuRef.current && !generatorMenuRef.current.contains(event.target as Node)) {
+        setIsGeneratorMenuOpen(false);
+      }
+      if (simulatorMenuRef.current && !simulatorMenuRef.current.contains(event.target as Node)) {
+        setIsSimulatorMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -170,57 +177,79 @@ const App: React.FC = () => {
             <div className="flex items-center gap-4">
                 <h1 className="font-bold text-slate-100 flex items-center gap-2">
                     <Braces className="w-5 h-5 text-indigo-500" />
-                    MockAPI Studio
+                    APIGuru
                 </h1>
             </div>
-            <div className="flex items-center gap-2">
-                <button 
-                    onClick={() => setIsSpecGenOpen(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-md transition-colors"
-                >
-                    <Menu className="w-3.5 h-3.5" /> Spec Generator
-                </button>
+            
+            <div className="flex items-center gap-3">
                 
-                <div className="w-px h-6 bg-slate-800 mx-1"></div>
-
-                {/* Testing Dropdown */}
-                <div className="relative" ref={testingMenuRef}>
+                {/* Generators Dropdown */}
+                <div className="relative" ref={generatorMenuRef}>
                     <button 
-                        onClick={() => setIsTestingMenuOpen(!isTestingMenuOpen)}
-                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium border rounded-md transition-all ${isTestingMenuOpen ? 'bg-slate-800 text-white border-slate-600' : 'text-slate-300 bg-slate-900 border-slate-700 hover:bg-slate-800'}`}
+                        onClick={() => setIsGeneratorMenuOpen(!isGeneratorMenuOpen)}
+                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium border rounded-md transition-all ${isGeneratorMenuOpen ? 'bg-slate-800 text-white border-slate-600' : 'text-slate-300 bg-slate-900 border-slate-700 hover:bg-slate-800'}`}
                     >
-                        <TestTube2 className="w-3.5 h-3.5" /> 
-                        Testing Suite
-                        <ChevronDown className={`w-3 h-3 transition-transform ${isTestingMenuOpen ? 'rotate-180' : ''}`} />
+                        <Wand2 className="w-3.5 h-3.5 text-indigo-400" /> 
+                        Generators
+                        <ChevronDown className={`w-3 h-3 transition-transform ${isGeneratorMenuOpen ? 'rotate-180' : ''}`} />
                     </button>
                     
-                    {isTestingMenuOpen && (
-                        <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 py-1 animate-in fade-in zoom-in-95 duration-150">
+                    {isGeneratorMenuOpen && (
+                        <div className="absolute top-full right-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 py-1 animate-in fade-in zoom-in-95 duration-150">
+                            <div className="px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Creation Tools</div>
                             <button 
-                                onClick={() => { setIsMsgSimOpen(true); setIsTestingMenuOpen(false); }}
-                                className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-emerald-300 flex items-center gap-2 group"
+                                onClick={() => { setIsSpecGenOpen(true); setIsGeneratorMenuOpen(false); }}
+                                className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2 group"
                             >
-                                <MessageSquare className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400" />
-                                Messaging Simulator
+                                <FileJson className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400" />
+                                OpenAPI Spec Designer
                             </button>
                             <button 
-                                onClick={() => { setIsLoadGenOpen(true); setIsTestingMenuOpen(false); }}
-                                className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-rose-300 flex items-center gap-2 group"
+                                onClick={() => { setIsMCPOpen(true); setIsGeneratorMenuOpen(false); }}
+                                className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2 group"
+                            >
+                                <Code2 className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400" />
+                                Code & Artifacts
+                            </button>
+                             <button 
+                                onClick={() => { setIsLoadGenOpen(true); setIsGeneratorMenuOpen(false); }}
+                                className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2 group"
                             >
                                 <Zap className="w-3.5 h-3.5 text-slate-500 group-hover:text-rose-400" />
-                                Load Generator
+                                Load Test Scripts
                             </button>
                         </div>
                     )}
                 </div>
 
-                <button 
-                    onClick={() => setIsMCPOpen(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-md transition-colors"
-                    title="Generate Clients and Servers"
-                >
-                    <Code2 className="w-3.5 h-3.5" /> Code Generator
-                </button>
+                 {/* Simulators Dropdown */}
+                <div className="relative" ref={simulatorMenuRef}>
+                    <button 
+                        onClick={() => setIsSimulatorMenuOpen(!isSimulatorMenuOpen)}
+                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium border rounded-md transition-all ${isSimulatorMenuOpen ? 'bg-slate-800 text-white border-slate-600' : 'text-slate-300 bg-slate-900 border-slate-700 hover:bg-slate-800'}`}
+                    >
+                        <Cpu className="w-3.5 h-3.5 text-emerald-400" /> 
+                        Simulators
+                        <ChevronDown className={`w-3 h-3 transition-transform ${isSimulatorMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {isSimulatorMenuOpen && (
+                        <div className="absolute top-full right-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 py-1 animate-in fade-in zoom-in-95 duration-150">
+                             <div className="px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Virtual Environments</div>
+                            <button 
+                                onClick={() => { setIsMsgSimOpen(true); setIsSimulatorMenuOpen(false); }}
+                                className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2 group"
+                            >
+                                <MessageSquare className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400" />
+                                Messaging Simulator
+                            </button>
+                             <div className="px-3 py-2 text-xs text-slate-500 italic border-t border-slate-800/50 mt-1">
+                                * Main Console active in workspace
+                             </div>
+                        </div>
+                    )}
+                </div>
+
             </div>
         </div>
 

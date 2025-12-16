@@ -1,33 +1,40 @@
-# MockAPI Studio
+# APIGuru
 
-**MockAPI Studio** is an intelligent, AI-powered OpenAPI (Swagger) Specification designer and virtual testing suite. It eliminates the need for a real backend during the early stages of development by using Google's **Gemini 2.5 Flash** model to simulate realistic API behavior, generate code, and audit specifications.
+**APIGuru** is an intelligent, AI-powered OpenAPI (Swagger) Specification designer and virtual testing suite. It eliminates the need for a real backend during the early stages of development by using Google's **Gemini 2.5 Flash** model to simulate realistic API behavior, generate code, and audit specifications.
 
-![MockAPI Studio](https://via.placeholder.com/1200x600/0f172a/e2e8f0?text=MockAPI+Studio+Interface)
+![APIGuru](https://via.placeholder.com/1200x600/0f172a/e2e8f0?text=APIGuru+Interface)
 
 ## 🚀 Key Features
 
-### 1. AI-Powered Spec Design
-*   **Prompt-to-Spec**: Describe your API in plain English (e.g., "A kanban board API with columns and tasks"), and the AI generates a valid OpenAPI 3.0 YAML spec.
-*   **URL-to-Spec (Search Grounding)**: Enter a documentation URL (e.g., Stripe, Twilio), and the AI uses Google Search Grounding to analyze the page and reverse-engineer an OpenAPI spec.
-*   **Discovery Mode**: Enter a goal or market category (e.g., "CPaaS"), and the AI uses Google Search to identify industry leaders (like Twilio) and model a spec after them.
+### 1. Generators
+Powerful AI tools to create specs and code artifacts instantly.
 
-### 2. Virtual Testing Console
-*   **No Backend Required**: Test endpoints immediately after defining them. The app acts as a **Virtual Logic Engine**.
-*   **Smart Mocking**:
-    *   **Logic Simulation**: Respects parameters like `limit=5`, `id=123`, or `status=active` in the generated response.
-    *   **Magic Fill**: Automatically populates request parameters and bodies with realistic dummy data based on schema types.
-    *   **Strict vs. Creative Mode**: Toggle between strict schema compliance or creative, diverse data generation.
-*   **NLP Agent Tester**: Interact with your API using natural language (e.g., "Create 5 users and then find the one named 'Alice'"). The Agent plans the execution and calls the virtual endpoints.
+*   **OpenAPI Spec Designer**:
+    *   **Prompt-to-Spec**: Describe your API in plain English (e.g., "A kanban board API").
+    *   **URL-to-Spec**: Reverse-engineer specs from existing documentation URLs using Google Search Grounding.
+    *   **Market Discovery**: Discover industry standards by searching for category leaders (e.g., "CPaaS").
+*   **Code & Artifacts**:
+    *   **MCP Servers**: Generate Model Context Protocol servers for AI Agents.
+    *   **Client SDKs**: TypeScript, Python, Go, Java, C#, C++.
+    *   **Server Stubs**: Spring Boot, FastAPI, Express.
+    *   **Documentation**: Markdown, HTML, AsciiDoc.
+*   **Load Test Scripts**:
+    *   Generate ready-to-run performance scripts for **k6**, **Locust**, and **Gatling**.
 
-### 3. Code & Artifact Generation
-Instantly generate production-ready code artifacts based on your spec:
-*   **MCP Servers**: Generate full Model Context Protocol servers to use your API with AI Agents.
-*   **API Clients**: TypeScript, Python, Go, Java, C#, C++.
-*   **Server Stubs**: Spring Boot, FastAPI, Express, etc.
-*   **Documentation**: Markdown, Single-page HTML, or AsciiDoc.
-*   **Load Testing**: Generate k6, Locust, or Gatling performance test scripts.
+### 2. Simulators
+Virtual environments to test your API logic without writing a single line of backend code.
 
-### 4. Spec Analysis & Auditing
+*   **Virtual Test Console**:
+    *   **Logic Engine**: Simulates a real backend, respecting parameters like `limit`, `sort`, and `id`.
+    *   **Smart Mocking**: Generates realistic data based on your schema types.
+    *   **File Uploads**: Simulates multipart uploads with custom file metadata generation.
+*   **Messaging Simulator**:
+    *   Test conversational endpoints (chatbots) in a familiar chat interface.
+    *   Auto-detects input/output fields for seamless testing.
+*   **Agent Tester**:
+    *   Natural Language Interface to interact with your API (e.g., "Create a user named Alice").
+
+### 3. Analysis & Auditing
 *   **AI Auditor**: Scans your YAML for security holes, logical inconsistencies, and RESTful best practices.
 *   **Reporting**: Generates a detailed Health Score and downloadable PDF reports.
 
@@ -42,8 +49,8 @@ Instantly generate production-ready code artifacts based on your spec:
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/your-username/mockapi-studio.git
-    cd mockapi-studio
+    git clone https://github.com/your-username/apiguru.git
+    cd apiguru
     ```
 
 2.  **Install Dependencies**
@@ -84,16 +91,18 @@ The layout consists of three panes:
 4.  Click **Execute**. The AI will generate a response based on your schema and inputs.
 
 ### Generating Code
-1.  Click **"Code Generator"** in the top toolbar.
-2.  Select the Artifact Type (e.g., MCP Server, API Client).
-3.  Select the Target Language.
-4.  Click **Generate** and copy the code.
+1.  Click **"Generators"** in the top toolbar.
+2.  Select **"Code & Artifacts"**.
+3.  Select the Artifact Type (e.g., MCP Server, API Client).
+4.  Select the Target Language.
+5.  Click **Generate** and copy the code.
 
 ## 📅 History of Development
 
 *   **v1.3.0 (Latest)**
-    *   **API Discovery**: Added "Discovery Mode" using Google Search to identify industry-leading APIs for a given category.
-    *   **Spec Download**: Added ability to download specs as `.yaml` files.
+    *   **Feature Regrouping**: Organized tools into "Generators" and "Simulators".
+    *   **API Discovery**: Added "Discovery Mode" using Google Search.
+    *   **Rebranding**: Renamed to **APIGuru**.
 
 *   **v1.2.0** - *The Agentic Era*
     *   Added **Messaging Simulator** for testing chat bots.
@@ -107,7 +116,7 @@ The layout consists of three panes:
     *   Implemented PDF export for Audit Reports.
 
 *   **v1.0.0** - *The AI Core*
-    *   Initial release of **MockAPI Studio**.
+    *   Initial release of **APIGuru**.
     *   Integrated Google Gemini `gemini-2.5-flash` for logic simulation.
     *   Built the "Virtual Backend" capable of understanding parameters like `limit` and `id`.
     *   Added the **AI Auditor** for security and best practices.

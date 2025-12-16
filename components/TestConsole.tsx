@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Operation, Parameter, OpenAPISpec } from '../types';
-import { Play, Loader2, Sparkles, Settings2, ChevronDown, X, MessageSquare, Bot, Wand2, FileUp, Paperclip, FileJson, Layers } from 'lucide-react';
+import { Play, Loader2, Sparkles, Settings2, ChevronDown, X, MessageSquare, Bot, Wand2, FileUp, Paperclip, FileJson, Layers, FileCog, RefreshCw, Check } from 'lucide-react';
 import { AgentChat } from './AgentChat';
 import { MockGenOptions } from '../services/geminiService';
 
@@ -35,6 +35,26 @@ const getMockValue = (schema: any, example?: any, name?: string): any => {
         return 'test_value';
     }
     return '';
+};
+
+const generateRandomMockFile = () => {
+    const types = [
+        { ext: 'pdf', mime: 'application/pdf' },
+        { ext: 'png', mime: 'image/png' },
+        { ext: 'jpg', mime: 'image/jpeg' },
+        { ext: 'csv', mime: 'text/csv' },
+        { ext: 'json', mime: 'application/json' },
+        { ext: 'txt', mime: 'text/plain' },
+        { ext: 'xlsx', mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+    ];
+    const t = types[Math.floor(Math.random() * types.length)];
+    const size = Math.floor(Math.random() * (5 * 1024 * 1024 - 1024 + 1)) + 1024; // 1KB - 5MB
+    return {
+        name: `random_upload_${Math.floor(Math.random()*1000)}.${t.ext}`,
+        type: t.mime,
+        size: size,
+        _isMockFile: true
+    };
 };
 
 // Helper to generate a full JSON body mock
@@ -73,6 +93,10 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
   const [selectedContentType, setSelectedContentType] = useState<string>('');
   const [multipartFields, setMultipartFields] = useState<Record<string, any>>({});
 
+  // File Config State
+  const [activeFileConfig, setActiveFileConfig] = useState<string | null>(null);
+  const [fileConfigState, setFileConfigState] = useState({ name: '', type: '', size: 0 });
+
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
   const [variationLevel, setVariationLevel] = useState<'strict' | 'creative'>('strict');
@@ -80,12 +104,16 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
   const [arrayItemCount, setArrayItemCount] = useState<string>('');
   
   const settingsRef = useRef<HTMLDivElement>(null);
+  const fileConfigRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Close settings on click outside
     const handleClickOutside = (event: MouseEvent) => {
       if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
         setShowSettings(false);
+      }
+      if (fileConfigRef.current && !fileConfigRef.current.contains(event.target as Node)) {
+        setActiveFileConfig(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -102,6 +130,7 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
     setParams(initialParams);
     setJsonBody('{\n  \n}');
     setMultipartFields({});
+    setActiveFileConfig(null);
     
     // Set default content type
     const types = operation.requestBody?.content ? Object.keys(operation.requestBody.content) : [];
@@ -125,6 +154,32 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
       setMultipartFields(prev => ({ ...prev, [key]: value }));
   };
 
+  const handleOpenFileConfig = (key: string) => {
+      const current = multipartFields[key] || { name: 'file.txt', type: 'text/plain', size: 1024 };
+      setFileConfigState({
+          name: current.name,
+          type: current.type,
+          size: current.size
+      });
+      setActiveFileConfig(key);
+  };
+
+  const handleSaveFileConfig = () => {
+      if (activeFileConfig) {
+          handleMultipartChange(activeFileConfig, { ...fileConfigState, _isMockFile: true });
+          setActiveFileConfig(null);
+      }
+  };
+
+  const handleRandomizeFile = () => {
+      const random = generateRandomMockFile();
+      setFileConfigState({
+          name: random.name,
+          type: random.type,
+          size: random.size
+      });
+  };
+
   const handleMagicFill = () => {
       // 1. Fill Params
       const newParams = { ...params };
@@ -145,7 +200,17 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
                   setJsonBody(JSON.stringify(mockBody, null, 2));
               } else if (selectedContentType.includes('multipart') || selectedContentType.includes('form')) {
                   // Generate flat object for multipart
-                  const mockData = generateMockBody(schema);
+                  const mockData: Record<string, any> = {};
+                  if (schema.properties) {
+                       Object.keys(schema.properties).forEach(key => {
+                           const prop = schema.properties[key];
+                           if (prop.type === 'string' && (prop.format === 'binary' || prop.format === 'byte' || key.toLowerCase().includes('file'))) {
+                               mockData[key] = generateRandomMockFile();
+                           } else {
+                               mockData[key] = getMockValue(prop, prop.example, key);
+                           }
+                       });
+                  }
                   setMultipartFields(mockData);
               }
           }
@@ -388,7 +453,7 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
                                 const isBinary = propSchema.type === 'string' && (propSchema.format === 'binary' || propSchema.format === 'byte' || key.toLowerCase().includes('file'));
                                 
                                 return (
-                                    <div key={key} className="group">
+                                    <div key={key} className="group relative">
                                         <label className="block text-xs font-medium text-slate-400 mb-1">
                                             {key}
                                             {currentBodySchema.required?.includes(key) && <span className="text-rose-400 ml-1">*</span>}
@@ -412,14 +477,79 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
                                                         <span className="text-sm text-slate-300 truncate">
                                                             {multipartFields[key]?.name || <span className="text-slate-600 italic">No file selected</span>}
                                                         </span>
-                                                        <label 
-                                                            htmlFor={`file-${key}`}
-                                                            className="flex items-center gap-1.5 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded cursor-pointer transition-colors border border-slate-700"
-                                                        >
-                                                            <Paperclip className="w-3 h-3" /> Browse
-                                                        </label>
+                                                        <div className="flex items-center gap-1">
+                                                            <button 
+                                                                onClick={() => handleOpenFileConfig(key)}
+                                                                className={`p-1.5 rounded hover:bg-slate-700 transition-colors ${activeFileConfig === key ? 'text-indigo-400' : 'text-slate-400'}`}
+                                                                title="Configure Mock File"
+                                                            >
+                                                                <FileCog className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <label 
+                                                                htmlFor={`file-${key}`}
+                                                                className="flex items-center gap-1.5 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded cursor-pointer transition-colors border border-slate-700"
+                                                            >
+                                                                <Paperclip className="w-3 h-3" /> Browse
+                                                            </label>
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                
+                                                {/* Mock File Config Popover */}
+                                                {activeFileConfig === key && (
+                                                    <div ref={fileConfigRef} className="absolute right-0 top-full mt-2 w-72 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-20 p-4 animate-in fade-in zoom-in-95 duration-150">
+                                                        <div className="flex justify-between items-center mb-3">
+                                                            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Mock File Config</h3>
+                                                            <button onClick={() => setActiveFileConfig(null)} className="text-slate-500 hover:text-slate-300">
+                                                                <X className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                        <div className="space-y-3">
+                                                            <div>
+                                                                <label className="text-[10px] text-slate-500 uppercase block mb-1">Filename</label>
+                                                                <input 
+                                                                    value={fileConfigState.name}
+                                                                    onChange={e => setFileConfigState({...fileConfigState, name: e.target.value})}
+                                                                    className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200"
+                                                                />
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <div>
+                                                                    <label className="text-[10px] text-slate-500 uppercase block mb-1">MIME Type</label>
+                                                                    <input 
+                                                                        value={fileConfigState.type}
+                                                                        onChange={e => setFileConfigState({...fileConfigState, type: e.target.value})}
+                                                                        className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="text-[10px] text-slate-500 uppercase block mb-1">Size (Bytes)</label>
+                                                                    <input 
+                                                                        type="number"
+                                                                        value={fileConfigState.size}
+                                                                        onChange={e => setFileConfigState({...fileConfigState, size: parseInt(e.target.value) || 0})}
+                                                                        className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div className="pt-2 flex gap-2">
+                                                                <button 
+                                                                    onClick={handleRandomizeFile}
+                                                                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-1.5 rounded border border-slate-700 flex items-center justify-center gap-1.5"
+                                                                >
+                                                                    <RefreshCw className="w-3 h-3" /> Random
+                                                                </button>
+                                                                <button 
+                                                                    onClick={handleSaveFileConfig}
+                                                                    className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs py-1.5 rounded flex items-center justify-center gap-1.5"
+                                                                >
+                                                                    <Check className="w-3 h-3" /> Apply
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 {multipartFields[key]?._isMockFile && (
                                                     <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded">Mock</span>
                                                 )}
