@@ -80,6 +80,7 @@ export interface HistoryItem {
   category: HistoryCategory;
   summary: string;
   details?: string;
+  actionData?: any; // Stores reproducible state (e.g., spec content, request params)
 }
 
 // Augment window for js-yaml loaded via CDN

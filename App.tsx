@@ -23,6 +23,7 @@ const App: React.FC = () => {
   
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [consoleRestoreData, setConsoleRestoreData] = useState<any>(null);
   
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -89,19 +90,43 @@ const App: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const addToHistory = (category: HistoryCategory, summary: string, details?: string) => {
+  const addToHistory = (category: HistoryCategory, summary: string, details?: string, actionData?: any) => {
       setHistory(prev => [...prev, {
           id: Date.now().toString() + Math.random(),
           timestamp: new Date(),
           category,
           summary,
-          details
+          details,
+          actionData
       }]);
+  };
+
+  const handleRestoreHistory = (item: HistoryItem) => {
+      if (!item.actionData) return;
+      
+      if (item.category === 'api_call') {
+          // Restore API Console State
+          setSelectedPath(item.actionData.path);
+          setSelectedMethod(item.actionData.method);
+          setConsoleRestoreData({ 
+              params: item.actionData.params, 
+              body: item.actionData.body 
+          });
+      } else if (item.category === 'spec_gen' || item.category === 'spec_migrate') {
+          // Restore Spec Content
+          if (item.actionData.spec) {
+              setRawSpec(item.actionData.spec);
+          }
+      }
+      
+      // Close timeline on restore for better UX
+      setIsTimelineOpen(false);
   };
 
   const handleSelectEndpoint = (path: string, method: string) => {
     setSelectedPath(path);
     setSelectedMethod(method);
+    setConsoleRestoreData(null); // Clear restore data on manual selection
   };
 
   const handleExecuteRequest = async (params: any, options?: MockGenOptions) => {
@@ -144,7 +169,20 @@ const App: React.FC = () => {
       };
 
       setLogs(prev => [...prev, newLog]);
-      addToHistory('api_call', `${selectedMethod.toUpperCase()} ${selectedPath}`, `Status: ${newLog.status} (${duration}ms)`);
+      
+      // Add to history with actionable data for replay
+      addToHistory(
+          'api_call', 
+          `${selectedMethod.toUpperCase()} ${selectedPath}`, 
+          `Status: ${newLog.status} (${duration}ms)`,
+          {
+              path: selectedPath,
+              method: selectedMethod,
+              params: params,
+              body: params._body // Note: params includes _body from TestConsole logic
+          }
+      );
+
     } catch (error) {
       console.error("Execution failed", error);
     } finally {
@@ -310,6 +348,7 @@ const App: React.FC = () => {
                         onExecute={handleExecuteRequest}
                         onAutoSelect={handleAutoSelect}
                         loading={loading}
+                        restoreData={consoleRestoreData}
                     />
                 ) : (
                     <SpecEditor 
@@ -334,6 +373,7 @@ const App: React.FC = () => {
         isOpen={isTimelineOpen}
         onClose={() => setIsTimelineOpen(false)}
         history={history}
+        onRestore={handleRestoreHistory}
       />
 
       <MCPGenerator 
@@ -367,7 +407,7 @@ const App: React.FC = () => {
         onClose={() => setIsSpecGenOpen(false)}
         onGenerate={(yaml) => {
             setRawSpec(yaml);
-            addToHistory('spec_gen', 'Generated New Specification');
+            addToHistory('spec_gen', 'Generated New Specification', 'Restorable Snapshot', { spec: yaml });
         }}
       />
 
@@ -376,7 +416,7 @@ const App: React.FC = () => {
         onClose={() => setIsMigratorOpen(false)}
         onMigrate={(yaml) => {
             setRawSpec(yaml);
-            addToHistory('spec_migrate', 'Migrated Specification');
+            addToHistory('spec_migrate', 'Migrated Specification', 'Restorable Snapshot', { spec: yaml });
         }}
       />
 

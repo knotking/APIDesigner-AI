@@ -12,6 +12,7 @@ interface TestConsoleProps {
   onExecute: (params: any, options?: MockGenOptions) => Promise<void>;
   onAutoSelect?: (path: string, method: string, params: any, body: any) => void;
   loading: boolean;
+  restoreData?: any; // Data passed when restoring from history
 }
 
 // Helper to generate a dummy value based on schema/type
@@ -82,7 +83,8 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
     operation, 
     onExecute, 
     onAutoSelect, 
-    loading 
+    loading,
+    restoreData
 }) => {
   const [params, setParams] = useState<Record<string, string>>({});
   const [jsonBody, setJsonBody] = useState<string>('{\n  \n}');
@@ -120,7 +122,7 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Reset and Auto-fill params/body when endpoint changes
+  // Initialization: Reset and Auto-fill params/body when endpoint changes
   useEffect(() => {
     const initialParams: Record<string, string> = {};
     operation.parameters?.forEach(p => {
@@ -145,6 +147,39 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
         }
     }
   }, [path, method, operation]);
+
+  // Restoration: Listen for restoreData changes
+  useEffect(() => {
+      if (restoreData) {
+          // Restore Parameters
+          if (restoreData.params) {
+              setParams(prev => ({ ...prev, ...restoreData.params }));
+          }
+
+          // Restore Body
+          if (restoreData.body) {
+              const body = restoreData.body;
+              // Check if body has _contentType or try to guess
+              const restoredType = body._contentType || selectedContentType || 'application/json';
+              
+              if (restoredType.includes('application/json')) {
+                   // Remove internal flags if present
+                   const { _contentType, ...cleanBody } = body;
+                   setJsonBody(JSON.stringify(cleanBody, null, 2));
+                   setSelectedContentType(restoredType);
+                   if (!['post', 'put', 'patch'].includes(method.toLowerCase())) {
+                        // Switch tab if body is restored
+                        setActiveTab('body');
+                   }
+              } else if (restoredType.includes('multipart') || restoredType.includes('form')) {
+                  const { _contentType, ...fields } = body;
+                  setMultipartFields(fields);
+                  setSelectedContentType(restoredType);
+                  setActiveTab('body');
+              }
+          }
+      }
+  }, [restoreData]);
 
   const handleParamChange = (key: string, value: string) => {
     setParams(prev => ({ ...prev, [key]: value }));

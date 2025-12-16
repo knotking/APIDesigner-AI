@@ -1,14 +1,15 @@
 import React from 'react';
-import { X, Clock, Code2, RefreshCw, Zap, ShieldCheck, Activity, Wand2 } from 'lucide-react';
+import { X, Clock, Code2, RefreshCw, Zap, ShieldCheck, Activity, Wand2, RotateCcw } from 'lucide-react';
 import { HistoryItem } from '../types';
 
 interface HistoryTimelineProps {
   isOpen: boolean;
   onClose: () => void;
   history: HistoryItem[];
+  onRestore: (item: HistoryItem) => void;
 }
 
-export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({ isOpen, onClose, history }) => {
+export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({ isOpen, onClose, history, onRestore }) => {
   const getIcon = (category: string) => {
     switch (category) {
       case 'api_call': return <Activity className="w-4 h-4 text-emerald-400" />;
@@ -69,10 +70,21 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({ isOpen, onClos
                   <div className="flex flex-col gap-1">
                     <div className="flex justify-between items-start">
                         <span className="text-xs font-semibold text-slate-200">{item.summary}</span>
-                        <span className="text-[10px] text-slate-500 tabular-nums">{formatTime(item.timestamp)}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-500 tabular-nums">{formatTime(item.timestamp)}</span>
+                            {item.actionData && (
+                                <button 
+                                    onClick={() => onRestore(item)}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-400 rounded"
+                                    title={item.category === 'api_call' ? "Replay Request" : "Restore Spec"}
+                                >
+                                    <RotateCcw className="w-3 h-3" />
+                                </button>
+                            )}
+                        </div>
                     </div>
                     {item.details && (
-                        <p className="text-xs text-slate-500">{item.details}</p>
+                        <p className="text-xs text-slate-500 break-words">{item.details}</p>
                     )}
                   </div>
                 </div>
