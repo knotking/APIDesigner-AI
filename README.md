@@ -4,6 +4,8 @@
 
 ![APIGuru](https://via.placeholder.com/1200x600/0f172a/e2e8f0?text=APIGuru+Interface)
 
+![apiguru](https://github.com/user-attachments/assets/378c9f76-bbb0-42ec-8959-d68a47f0a48a)
+
 ## 🚀 Key Features
 
 ### 1. Generators
