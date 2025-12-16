@@ -9,6 +9,7 @@
 ### 1. AI-Powered Spec Design
 *   **Prompt-to-Spec**: Describe your API in plain English (e.g., "A kanban board API with columns and tasks"), and the AI generates a valid OpenAPI 3.0 YAML spec.
 *   **URL-to-Spec (Search Grounding)**: Enter a documentation URL (e.g., Stripe, Twilio), and the AI uses Google Search Grounding to analyze the page and reverse-engineer an OpenAPI spec.
+*   **Discovery Mode**: Enter a goal or market category (e.g., "CPaaS"), and the AI uses Google Search to identify industry leaders (like Twilio) and model a spec after them.
 
 ### 2. Virtual Testing Console
 *   **No Backend Required**: Test endpoints immediately after defining them. The app acts as a **Virtual Logic Engine**.
@@ -90,7 +91,11 @@ The layout consists of three panes:
 
 ## 📅 History of Development
 
-*   **v1.2.0 (Current)** - *The Agentic Era*
+*   **v1.3.0 (Latest)**
+    *   **API Discovery**: Added "Discovery Mode" using Google Search to identify industry-leading APIs for a given category.
+    *   **Spec Download**: Added ability to download specs as `.yaml` files.
+
+*   **v1.2.0** - *The Agentic Era*
     *   Added **Messaging Simulator** for testing chat bots.
     *   Introduced **File Upload Simulation** for multipart requests.
     *   Enhanced **Search Grounding** for URL-to-Spec generation.

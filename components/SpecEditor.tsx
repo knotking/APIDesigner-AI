@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wand2, ShieldCheck } from 'lucide-react';
+import { Wand2, ShieldCheck, Download } from 'lucide-react';
 
 interface SpecEditorProps {
   value: string;
@@ -10,6 +10,33 @@ interface SpecEditorProps {
 }
 
 export const SpecEditor: React.FC<SpecEditorProps> = ({ value, onChange, error, onAiGenerate, onAnalyze }) => {
+  
+  const handleDownload = () => {
+    let filename = 'openapi-spec.yaml';
+    try {
+      // Attempt to parse title for filename, even if spec has errors elsewhere
+      const parsed: any = window.jsyaml.load(value);
+      if (parsed?.info?.title) {
+        filename = parsed.info.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '') + '.yaml';
+      }
+    } catch (e) {
+      // Keep default filename if parsing fails
+    }
+
+    const blob = new Blob([value], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col h-full border-r border-slate-800 bg-slate-950">
       <div className="p-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur flex justify-between items-center">
@@ -30,6 +57,14 @@ export const SpecEditor: React.FC<SpecEditorProps> = ({ value, onChange, error, 
                 >
                     <ShieldCheck className="w-3 h-3" />
                     Analyze
+                </button>
+                <button 
+                    onClick={handleDownload}
+                    className="flex items-center gap-1.5 px-2 py-1 bg-slate-700/50 hover:bg-slate-700 text-slate-300 text-[10px] font-medium rounded border border-slate-600 transition-colors group"
+                    title="Download YAML"
+                >
+                    <Download className="w-3 h-3" />
+                    Save
                 </button>
             </div>
         </div>

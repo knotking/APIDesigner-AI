@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Wand2, Loader2, Sparkles, Globe, Type } from 'lucide-react';
+import { X, Wand2, Loader2, Sparkles, Globe, Type, Compass } from 'lucide-react';
 import { generateSpecFromPrompt } from '../services/geminiService';
 
 interface SpecGeneratorModalProps {
@@ -9,7 +9,7 @@ interface SpecGeneratorModalProps {
 }
 
 export const SpecGeneratorModal: React.FC<SpecGeneratorModalProps> = ({ isOpen, onClose, onGenerate }) => {
-  const [mode, setMode] = useState<'prompt' | 'url'>('prompt');
+  const [mode, setMode] = useState<'prompt' | 'url' | 'discover'>('prompt');
   const [prompt, setPrompt] = useState('');
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,10 +19,16 @@ export const SpecGeneratorModal: React.FC<SpecGeneratorModalProps> = ({ isOpen, 
   const handleGenerate = async () => {
     if (mode === 'prompt' && !prompt.trim()) return;
     if (mode === 'url' && !url.trim()) return;
+    if (mode === 'discover' && !prompt.trim()) return;
     
     setLoading(true);
     try {
-      const yaml = await generateSpecFromPrompt(prompt, mode === 'url' ? url : undefined);
+      const yaml = await generateSpecFromPrompt(
+        prompt, 
+        mode === 'url' ? url : undefined,
+        undefined,
+        mode === 'discover'
+      );
       onGenerate(yaml);
       onClose();
     } catch (error) {
@@ -51,7 +57,7 @@ export const SpecGeneratorModal: React.FC<SpecGeneratorModalProps> = ({ isOpen, 
             </div>
             <div>
                 <h2 className="text-lg font-bold text-slate-100">AI Spec Designer</h2>
-                <p className="text-xs text-slate-400">Describe your API or provide a URL.</p>
+                <p className="text-xs text-slate-400">Generate OpenAPI specs from natural language, URLs, or market research.</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors">
@@ -59,112 +65,142 @@ export const SpecGeneratorModal: React.FC<SpecGeneratorModalProps> = ({ isOpen, 
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="px-6 pt-6">
-            <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 w-full">
-                <button 
-                    onClick={() => setMode('prompt')}
-                    className={`flex-1 py-2 text-xs font-medium rounded-md flex items-center justify-center gap-2 transition-all ${
-                        mode === 'prompt' 
-                        ? 'bg-slate-800 text-white shadow-sm' 
-                        : 'text-slate-500 hover:text-slate-300'
-                    }`}
-                >
-                    <Type className="w-3.5 h-3.5" /> Text Description
-                </button>
-                <button 
-                    onClick={() => setMode('url')}
-                    className={`flex-1 py-2 text-xs font-medium rounded-md flex items-center justify-center gap-2 transition-all ${
-                        mode === 'url' 
-                        ? 'bg-slate-800 text-white shadow-sm' 
-                        : 'text-slate-500 hover:text-slate-300'
-                    }`}
-                >
-                    <Globe className="w-3.5 h-3.5" /> Website URL
-                </button>
-            </div>
+        {/* Mode Tabs */}
+        <div className="flex border-b border-slate-800">
+             <button 
+                onClick={() => setMode('prompt')}
+                className={`flex-1 py-3 text-xs font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${mode === 'prompt' ? 'border-indigo-500 text-indigo-300 bg-indigo-500/5' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+             >
+                <Type className="w-4 h-4" /> Description
+             </button>
+             <button 
+                onClick={() => setMode('url')}
+                className={`flex-1 py-3 text-xs font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${mode === 'url' ? 'border-sky-500 text-sky-300 bg-sky-500/5' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+             >
+                <Globe className="w-4 h-4" /> Website URL
+             </button>
+             <button 
+                onClick={() => setMode('discover')}
+                className={`flex-1 py-3 text-xs font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${mode === 'discover' ? 'border-emerald-500 text-emerald-300 bg-emerald-500/5' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+             >
+                <Compass className="w-4 h-4" /> Discovery
+             </button>
         </div>
 
-        {/* Body */}
+        {/* Content */}
         <div className="p-6 flex-1 overflow-y-auto">
-            <div className="flex flex-col gap-4 h-full">
-                
-                {mode === 'prompt' ? (
-                    <div className="space-y-4 animate-in fade-in duration-300">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-300">Describe your API</label>
-                            <textarea
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                className="w-full h-48 bg-slate-950 border border-slate-800 rounded-lg p-4 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none transition-all shadow-inner"
-                                placeholder="e.g., Create a robust REST API for a blog platform. It should have endpoints for managing posts, comments, and user profiles. Include authentication headers..."
-                                autoFocus
-                            />
+            
+            {mode === 'prompt' && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-300">
+                    <div>
+                        <label className="text-sm font-medium text-slate-300 block mb-2">Describe your API</label>
+                        <textarea
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            placeholder="e.g. A CRM API for managing leads, contacts, and deals. It should have authentication endpoints..."
+                            className="w-full h-32 bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 resize-none placeholder-slate-600"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">Suggestions</label>
+                        <div className="grid grid-cols-1 gap-2">
+                            {suggestions.map((s, i) => (
+                                <button 
+                                    key={i} 
+                                    onClick={() => setPrompt(s)}
+                                    className="text-left text-xs text-slate-400 p-2 rounded hover:bg-slate-800 border border-transparent hover:border-slate-700 transition-colors truncate"
+                                >
+                                    {s}
+                                </button>
+                            ))}
                         </div>
+                    </div>
+                </div>
+            )}
 
-                        <div className="space-y-2">
-                            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Examples</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {suggestions.map((s, i) => (
-                                    <button 
-                                        key={i}
-                                        onClick={() => setPrompt(s)}
-                                        className="text-left text-xs p-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-indigo-300 border border-slate-700/50 transition-colors"
-                                    >
-                                        {s}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+            {mode === 'url' && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
+                    <div className="bg-sky-500/10 border border-sky-500/20 rounded-lg p-4 flex gap-3">
+                         <Globe className="w-5 h-5 text-sky-400 shrink-0" />
+                         <div>
+                             <h3 className="text-sm font-bold text-sky-100 mb-1">Search Grounding</h3>
+                             <p className="text-xs text-sky-200/70">
+                                 Enter a URL to existing API documentation (e.g., Stripe, Twilio). 
+                                 The AI will read the page using Google Search and reverse-engineer an OpenAPI spec.
+                             </p>
+                         </div>
                     </div>
-                ) : (
-                    <div className="space-y-4 animate-in fade-in duration-300">
-                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-300">Target Website URL</label>
-                            <div className="relative">
-                                <Globe className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
-                                <input
-                                    type="text"
-                                    value={url}
-                                    onChange={(e) => setUrl(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 pl-9 pr-4 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
-                                    placeholder="https://stripe.com/docs/api"
-                                    autoFocus
-                                />
-                            </div>
-                            <p className="text-xs text-slate-500">
-                                The AI will visit the URL to understand the API structure, endpoints, and models.
-                            </p>
-                        </div>
-                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-300">Additional Instructions (Optional)</label>
-                            <textarea
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                className="w-full h-32 bg-slate-950 border border-slate-800 rounded-lg p-4 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none transition-all shadow-inner"
-                                placeholder="e.g., Only focus on the 'Customers' and 'Payments' sections..."
-                            />
-                        </div>
+
+                    <div>
+                        <label className="text-sm font-medium text-slate-300 block mb-2">Documentation URL</label>
+                        <input
+                            type="text"
+                            value={url}
+                            onChange={(e) => setUrl(e.target.value)}
+                            placeholder="https://docs.example.com/api-reference"
+                            className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-sky-500 placeholder-slate-600"
+                        />
                     </div>
-                )}
-            </div>
+
+                     <div>
+                        <label className="text-sm font-medium text-slate-300 block mb-2">Additional Notes (Optional)</label>
+                        <textarea
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            placeholder="e.g. Focus only on the 'Payments' section..."
+                            className="w-full h-20 bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-sky-500 resize-none placeholder-slate-600"
+                        />
+                    </div>
+                </div>
+            )}
+
+            {mode === 'discover' && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 flex gap-3">
+                         <Compass className="w-5 h-5 text-emerald-400 shrink-0" />
+                         <div>
+                             <h3 className="text-sm font-bold text-emerald-100 mb-1">Market Discovery</h3>
+                             <p className="text-xs text-emerald-200/70">
+                                 Don't have a spec? Enter a goal or category (e.g. "CPaaS", "Payment Gateway"). 
+                                 The AI will find the leading provider (e.g. Twilio, Stripe) and model a spec after them.
+                             </p>
+                         </div>
+                    </div>
+
+                    <div>
+                        <label className="text-sm font-medium text-slate-300 block mb-2">Goal or Category</label>
+                        <input
+                            type="text"
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            placeholder="e.g. CPaaS, Transactional Email, Shipping Logistics..."
+                            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 placeholder-slate-600"
+                        />
+                    </div>
+                </div>
+            )}
+
         </div>
 
         {/* Footer */}
         <div className="p-6 border-t border-slate-800 bg-slate-900 flex justify-end gap-3">
-            <button 
+             <button 
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-200 transition-colors"
+                className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 font-medium transition-colors"
             >
                 Cancel
             </button>
             <button 
                 onClick={handleGenerate}
-                disabled={loading || (mode === 'prompt' && !prompt.trim()) || (mode === 'url' && !url.trim())}
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-900/20"
+                disabled={loading || (mode === 'url' && !url) || (mode !== 'url' && !prompt)}
+                className={`px-6 py-2 rounded-lg font-bold text-sm text-white flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${
+                    mode === 'url' ? 'bg-sky-600 hover:bg-sky-500 shadow-sky-900/20' : 
+                    mode === 'discover' ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20' :
+                    'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/20'
+                }`}
             >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                {loading ? 'Designing Spec...' : 'Generate Specification'}
+                {loading ? 'Designing...' : 'Generate Spec'}
             </button>
         </div>
       </div>

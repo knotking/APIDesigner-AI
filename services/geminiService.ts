@@ -242,7 +242,12 @@ export const parseNLQuery = async (
     }
 };
 
-export const generateSpecFromPrompt = async (description: string, url?: string, currentSpec?: string): Promise<string> => {
+export const generateSpecFromPrompt = async (
+    description: string, 
+    url?: string, 
+    currentSpec?: string,
+    isDiscovery: boolean = false
+): Promise<string> => {
     const client = getClient();
     if (!client) return "# Error: API Key missing";
 
@@ -262,6 +267,16 @@ export const generateSpecFromPrompt = async (description: string, url?: string, 
         1. Use Google Search to analyze the content of the provided URL. 
         2. Identify API endpoints, data models, and structures described on that page.
         3. Create an OpenAPI specification that mirrors the API found at that URL.
+        `;
+        tools = [{ googleSearch: {} }];
+    } else if (isDiscovery) {
+        context = `
+        Goal/Category: "${description}"
+        
+        INSTRUCTION:
+        1. Use Google Search to identify the top/leading API provider for the specified goal or category (e.g., if "CPaaS", find Twilio; if "Payment", find Stripe).
+        2. Briefly mention which provider you selected in the spec description.
+        3. Create a comprehensive OpenAPI specification that mirrors the core functionality of that provider's API.
         `;
         tools = [{ googleSearch: {} }];
     }
