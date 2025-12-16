@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, Check, Loader2, Code2, Server, Terminal, Box, FileText } from 'lucide-react';
+import { X, Copy, Check, Loader2, Code2, Server, Terminal, Box, FileText, Bot } from 'lucide-react';
 import { generateCodeArtifact, ArtifactType, Language } from '../services/geminiService';
 
 interface MCPGeneratorProps {
@@ -110,6 +110,20 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
                         </div>
                     </button>
                     <button
+                        onClick={() => setArtifactType('sdk-agent')}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
+                            artifactType === 'sdk-agent' 
+                            ? 'bg-cyan-600/10 border-cyan-500 text-cyan-300' 
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                        }`}
+                    >
+                        <Bot className="w-5 h-5 shrink-0" />
+                        <div>
+                            <div className="text-sm font-semibold">SDK Agent</div>
+                            <div className="text-[10px] opacity-70">Autonomous API Consumer</div>
+                        </div>
+                    </button>
+                    <button
                         onClick={() => setArtifactType('api-client')}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
                             artifactType === 'api-client' 
@@ -182,7 +196,7 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
                         className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-900/20"
                     >
                         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Code2 className="w-5 h-5" />}
-                        {loading ? 'Generating...' : `Generate ${artifactType === 'mcp-server' ? 'MCP Server' : artifactType === 'api-client' ? 'Client SDK' : artifactType === 'api-server' ? 'Server Stub' : 'Docs'}`}
+                        {loading ? 'Generating...' : `Generate ${artifactType === 'mcp-server' ? 'MCP Server' : artifactType === 'sdk-agent' ? 'SDK Agent' : artifactType === 'api-client' ? 'Client SDK' : artifactType === 'api-server' ? 'Server Stub' : 'Docs'}`}
                     </button>
                 </div>
             </div>
