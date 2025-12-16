@@ -16,8 +16,8 @@ export interface MockGenOptions {
     arrayItemCount?: number;
 }
 
-export type ArtifactType = 'mcp-server' | 'api-client' | 'api-server' | 'documentation';
-export type Language = 'python' | 'java' | 'go' | 'csharp' | 'typescript' | 'cpp' | 'markdown' | 'html' | 'asciidoc';
+export type ArtifactType = 'mcp-server' | 'api-client' | 'api-server' | 'documentation' | 'mock-server';
+export type Language = 'python' | 'java' | 'go' | 'csharp' | 'typescript' | 'cpp' | 'markdown' | 'html' | 'asciidoc' | 'nodejs';
 
 export interface AnalysisIssue {
     severity: 'critical' | 'warning' | 'info';
@@ -144,6 +144,17 @@ export const generateCodeArtifact = async (
             - Define routes/controllers matching the OpenAPI spec.
             - Include DTOs/Models validation logic where appropriate.
             - Framework suggestions: Spring Boot (Java), FastAPI (Python), Gin (Go), ASP.NET Core (C#), Express/NestJS (TypeScript), Crow/Drogon (C++).
+            `;
+            break;
+        case 'mock-server':
+            typeDescription = "Standalone Mock API Server";
+            specifics = `
+            - Generate a runnable server script (e.g., Express.js for Node, Flask/FastAPI for Python).
+            - Implement ALL endpoints defined in the spec.
+            - CRITICAL: The endpoints MUST return realistic MOCK DATA (JSON) based on the response schemas.
+            - Do not just put 'TODO'. Use random data generation (names, dates, ids) or static examples from the spec.
+            - Include CORS setup to allow external calls.
+            - Provide a self-contained script that can be run immediately (e.g. 'node server.js' or 'python server.py').
             `;
             break;
         case 'documentation':
@@ -306,6 +317,56 @@ export const generateSpecFromPrompt = async (
             }
         });
         return response.text?.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '') || "# Error generating spec";
+    } catch (error) {
+        return `# Error: ${error}`;
+    }
+};
+
+export const migrateSpec = async (
+    specContent: string,
+    targetVersion: string,
+    instructions: string,
+    isUrl: boolean = false
+): Promise<string> => {
+    const client = getClient();
+    if (!client) return "# Error: API Key missing";
+
+    let tools = undefined;
+    let contentContext = "";
+
+    if (isUrl) {
+        contentContext = `Source Spec URL: ${specContent}\nNote: Use Google Search to fetch or read the content of this URL if possible. If it's a documentation page, extract the spec.`;
+        tools = [{ googleSearch: {} }];
+    } else {
+        contentContext = `Source Spec Content:\n${specContent.substring(0, 50000)}`; // Truncate safe limit
+    }
+
+    const prompt = `
+    You are an API Infrastructure Migration Expert.
+    
+    Task: Migrate/Convert the provided API Specification to ${targetVersion}.
+    
+    ${contentContext}
+    
+    Additional Instructions: "${instructions}"
+    
+    Requirements:
+    1. Output ONLY the valid YAML of the migrated spec. No markdown code blocks.
+    2. Ensure strictly valid syntax for the target version (${targetVersion}).
+    3. Correctly transform Schema definitions, Parameters, and Request Bodies.
+    4. Preserve all original descriptions, summaries, and examples.
+    5. If upgrading from Swagger 2.0 to OpenAPI 3.x, ensure 'body' parameters are converted to 'requestBody'.
+    `;
+
+    try {
+        const response = await client.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                tools: tools,
+            }
+        });
+        return response.text?.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '') || "# Error migrating spec";
     } catch (error) {
         return `# Error: ${error}`;
     }

@@ -13,6 +13,9 @@ Powerful AI tools to create specs and code artifacts instantly.
     *   **Prompt-to-Spec**: Describe your API in plain English (e.g., "A kanban board API").
     *   **URL-to-Spec**: Reverse-engineer specs from existing documentation URLs using Google Search Grounding.
     *   **Market Discovery**: Discover industry standards by searching for category leaders (e.g., "CPaaS").
+*   **Spec Migrator**:
+    *   **Version Upgrade**: Transform legacy **Swagger 2.0** specs to modern **OpenAPI 3.0/3.1** formats.
+    *   **Format Conversion**: Upload files (`.json`, `.yaml`) or paste content directly.
 *   **Code & Artifacts**:
     *   **MCP Servers**: Generate Model Context Protocol servers for AI Agents.
     *   **Client SDKs**: TypeScript, Python, Go, Java, C#, C++.
@@ -31,6 +34,9 @@ Virtual environments to test your API logic without writing a single line of bac
 *   **Messaging Simulator**:
     *   Test conversational endpoints (chatbots) in a familiar chat interface.
     *   Auto-detects input/output fields for seamless testing.
+*   **Mock Data Explorer**:
+    *   Instantly preview realistic JSON response data for any endpoint.
+    *   Browse endpoints and regenerate diverse sample data with a single click—no configuration required.
 *   **Agent Tester**:
     *   Natural Language Interface to interact with your API (e.g., "Create a user named Alice").
 
@@ -99,7 +105,13 @@ The layout consists of three panes:
 
 ## 📅 History of Development
 
-*   **v1.3.0 (Latest)**
+*   **v1.5.0 (Latest)**
+    *   **Mock Data Explorer**: Replaced code generation with an in-UI data explorer for instant JSON previews.
+    
+*   **v1.4.0**
+    *   **Spec Migrator**: Added ability to migrate Swagger 2.0 to OpenAPI 3.0 via file upload or URL.
+    
+*   **v1.3.0**
     *   **Feature Regrouping**: Organized tools into "Generators" and "Simulators".
     *   **API Discovery**: Added "Discovery Mode" using Google Search.
     *   **Rebranding**: Renamed to **APIGuru**.

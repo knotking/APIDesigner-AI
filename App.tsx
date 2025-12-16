@@ -10,8 +10,10 @@ import { SpecGeneratorModal } from './components/SpecGeneratorModal';
 import { LoadTestGenerator } from './components/LoadTestGenerator';
 import { MessagingSimulator } from './components/MessagingSimulator';
 import { SpecAnalysisModal } from './components/SpecAnalysisModal';
+import { SpecMigratorModal } from './components/SpecMigratorModal';
+import { MockServerModal } from './components/MockServerModal';
 import { generateMockResponse, MockGenOptions, analyzeSpec, AnalysisReport } from './services/geminiService';
-import { Braces, Zap, MessageSquare, ChevronDown, Code2, Wand2, Cpu, FileJson } from 'lucide-react';
+import { Braces, Zap, MessageSquare, ChevronDown, Code2, Wand2, Cpu, FileJson, RefreshCw, Database } from 'lucide-react';
 
 const App: React.FC = () => {
   const [rawSpec, setRawSpec] = useState<string>(DEFAULT_SPEC_YAML);
@@ -29,6 +31,8 @@ const App: React.FC = () => {
   const [isSpecGenOpen, setIsSpecGenOpen] = useState(false);
   const [isLoadGenOpen, setIsLoadGenOpen] = useState(false);
   const [isMsgSimOpen, setIsMsgSimOpen] = useState(false);
+  const [isMigratorOpen, setIsMigratorOpen] = useState(false);
+  const [isMockServerOpen, setIsMockServerOpen] = useState(false);
   
   // Analysis State
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
@@ -205,6 +209,13 @@ const App: React.FC = () => {
                                 OpenAPI Spec Designer
                             </button>
                             <button 
+                                onClick={() => { setIsMigratorOpen(true); setIsGeneratorMenuOpen(false); }}
+                                className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2 group"
+                            >
+                                <RefreshCw className="w-3.5 h-3.5 text-slate-500 group-hover:text-orange-400" />
+                                Spec Migrator (v2 → v3)
+                            </button>
+                            <button 
                                 onClick={() => { setIsMCPOpen(true); setIsGeneratorMenuOpen(false); }}
                                 className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2 group"
                             >
@@ -242,6 +253,13 @@ const App: React.FC = () => {
                             >
                                 <MessageSquare className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400" />
                                 Messaging Simulator
+                            </button>
+                             <button 
+                                onClick={() => { setIsMockServerOpen(true); setIsSimulatorMenuOpen(false); }}
+                                className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2 group"
+                            >
+                                <Database className="w-3.5 h-3.5 text-slate-500 group-hover:text-violet-400" />
+                                Mock Data Explorer
                             </button>
                              <div className="px-3 py-2 text-xs text-slate-500 italic border-t border-slate-800/50 mt-1">
                                 * Main Console active in workspace
@@ -303,11 +321,23 @@ const App: React.FC = () => {
         isOpen={isMsgSimOpen}
         onClose={() => setIsMsgSimOpen(false)}
       />
+      
+      <MockServerModal
+        spec={parsedSpec}
+        isOpen={isMockServerOpen}
+        onClose={() => setIsMockServerOpen(false)}
+      />
 
       <SpecGeneratorModal
         isOpen={isSpecGenOpen}
         onClose={() => setIsSpecGenOpen(false)}
         onGenerate={(yaml) => setRawSpec(yaml)}
+      />
+
+      <SpecMigratorModal
+        isOpen={isMigratorOpen}
+        onClose={() => setIsMigratorOpen(false)}
+        onMigrate={(yaml) => setRawSpec(yaml)}
       />
 
       <SpecAnalysisModal
