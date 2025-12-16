@@ -60,7 +60,7 @@ export const generateMockResponse = async (
         `;
     }
 
-    const arrayCountInstruction = options.arrayItemCount 
+    const arrayCountInstruction = options.arrayItemCount !== undefined
         ? `Generate exactly ${options.arrayItemCount} items (unless a parameter like 'limit' explicitly dictates otherwise).`
         : `If no limit is specified, generate ${isCreative ? '3-5' : '1-2'} items.`;
 

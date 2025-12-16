@@ -81,7 +81,7 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
     method, 
     operation, 
     onExecute, 
-    onAutoSelect,
+    onAutoSelect, 
     loading 
 }) => {
   const [params, setParams] = useState<Record<string, string>>({});
@@ -246,7 +246,8 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
     onExecute({ ...params, _body: finalBody }, {
         variationLevel,
         exampleValues: parsedExamples,
-        arrayItemCount: arrayItemCount ? parseInt(arrayItemCount) : undefined
+        // Check for empty string specifically, so '0' is treated as a valid number
+        arrayItemCount: arrayItemCount !== '' ? parseInt(arrayItemCount) : undefined
     });
   };
 
@@ -366,6 +367,7 @@ export const TestConsole: React.FC<TestConsoleProps> = ({
                             <label className="text-xs text-slate-500 block mb-2">Array Item Count</label>
                             <input 
                                 type="number"
+                                min="0"
                                 value={arrayItemCount}
                                 onChange={(e) => setArrayItemCount(e.target.value)}
                                 placeholder="e.g. 5 (Leave empty for random)"
