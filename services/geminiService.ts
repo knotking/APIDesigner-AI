@@ -13,6 +13,7 @@ const getClient = () => {
 export interface MockGenOptions {
     variationLevel?: 'strict' | 'creative';
     exampleValues?: Record<string, any>;
+    arrayItemCount?: number;
 }
 
 export type ArtifactType = 'mcp-server' | 'api-client' | 'api-server' | 'documentation';
@@ -59,6 +60,10 @@ export const generateMockResponse = async (
         `;
     }
 
+    const arrayCountInstruction = options.arrayItemCount 
+        ? `Generate exactly ${options.arrayItemCount} items (unless a parameter like 'limit' explicitly dictates otherwise).`
+        : `If no limit is specified, generate ${isCreative ? '3-5' : '1-2'} items.`;
+
     const prompt = `
     You are a Virtual API Backend Logic Engine. 
     Your task is to generate a SINGLE, valid JSON response object that faithfully simulates a real backend processing the User Input.
@@ -80,7 +85,7 @@ export const generateMockResponse = async (
        - Example: If 'status=active', the returned object status MUST be 'active'.
     2. **VALID JSON**: Output strictly valid JSON. No markdown code blocks.
     3. **VARIATION**: ${isCreative ? 'CREATIVE. Generate diverse, realistic, and interesting data (e.g., vary names, use realistic descriptions, believable timestamps).' : 'STRICT. Generate standard, predictable data adhering strictly to types. Use generic values (e.g., "string", 0) unless specific formats require otherwise.'}
-    4. If the schema is an array and no limit is specified, generate ${isCreative ? '3-5' : '1-2'} items.
+    4. If the schema is an array: ${arrayCountInstruction}
     `;
 
     try {
@@ -394,4 +399,6 @@ export const analyzeSpec = async (specYaml: string): Promise<AnalysisReport> => 
         });
         return JSON.parse(response.text || '{"score": 0, "summary": "Failed to parse", "issues": []}');
     } catch (error) {
-        return { score: 0, summary: "Analysis Failed",
+        return { score: 0, summary: "Analysis Failed", issues: [] };
+    }
+};
