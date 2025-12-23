@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, Check, Loader2, Code2, Server, Terminal, Box, FileText, Bot } from 'lucide-react';
+import { X, Copy, Check, Loader2, Code2, Server, Terminal, Box, FileText, Bot, Sparkles } from 'lucide-react';
 import { generateCodeArtifact, ArtifactType, Language } from '../services/geminiService';
 
 interface MCPGeneratorProps {
@@ -11,14 +11,12 @@ interface MCPGeneratorProps {
 
 export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, onClose, onLogHistory }) => {
   const [artifactType, setArtifactType] = useState<ArtifactType>('mcp-server');
-  // Default to python for code, or markdown for docs
   const [language, setLanguage] = useState<Language>('python');
   
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Reset language when type changes to ensure valid selection
   useEffect(() => {
     if (artifactType === 'documentation') {
         setLanguage('markdown');
@@ -36,7 +34,6 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
     setGeneratedCode(code);
     setLoading(false);
     
-    // Log success
     if (code && !code.startsWith('// Error')) {
         onLogHistory('code_gen', `Generated ${artifactType} in ${language}`);
     }
@@ -58,10 +55,10 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
       }
       return [
         { id: 'python', label: 'Python' },
-        { id: 'java', label: 'Java' },
         { id: 'typescript', label: 'TypeScript' },
-        { id: 'csharp', label: 'C# (.NET)' },
+        { id: 'java', label: 'Java' },
         { id: 'go', label: 'Go' },
+        { id: 'csharp', label: 'C# (.NET)' },
         { id: 'cpp', label: 'C++' },
       ];
   };
@@ -80,7 +77,7 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
             </div>
             <div>
                 <h2 className="text-lg font-bold text-slate-100">Generator</h2>
-                <p className="text-xs text-slate-400">Generate Servers, Clients, Documentation, and MCP Agents</p>
+                <p className="text-xs text-slate-400">Generate Servers, Clients, Documentation, and Google AI Agents</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors">
@@ -106,21 +103,22 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
                         <Box className="w-5 h-5 shrink-0" />
                         <div>
                             <div className="text-sm font-semibold">MCP Server</div>
-                            <div className="text-[10px] opacity-70">AI Agent Context Protocol</div>
+                            <div className="text-[10px] opacity-70">Model Context Protocol for Agents</div>
                         </div>
                     </button>
                     <button
                         onClick={() => setArtifactType('sdk-agent')}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left relative overflow-hidden ${
                             artifactType === 'sdk-agent' 
                             ? 'bg-cyan-600/10 border-cyan-500 text-cyan-300' 
                             : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                         }`}
                     >
+                        <Sparkles className="absolute top-2 right-2 w-3 h-3 text-cyan-400 animate-pulse" />
                         <Bot className="w-5 h-5 shrink-0" />
                         <div>
-                            <div className="text-sm font-semibold">SDK Agent</div>
-                            <div className="text-[10px] opacity-70">Autonomous API Consumer</div>
+                            <div className="text-sm font-semibold">Google SDK Agent</div>
+                            <div className="text-[10px] opacity-70">Gemini-Powered API Tooling</div>
                         </div>
                     </button>
                     <button
@@ -134,7 +132,7 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
                         <Terminal className="w-5 h-5 shrink-0" />
                         <div>
                             <div className="text-sm font-semibold">API Client SDK</div>
-                            <div className="text-[10px] opacity-70">Reusable consumer library</div>
+                            <div className="text-[10px] opacity-70">Typed consumer library</div>
                         </div>
                     </button>
                     <button
@@ -193,10 +191,12 @@ export const MCPGenerator: React.FC<MCPGeneratorProps> = ({ specYaml, isOpen, on
                      <button
                         onClick={handleGenerate}
                         disabled={loading}
-                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-900/20"
+                        className={`w-full font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${
+                            artifactType === 'sdk-agent' ? 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-900/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/20'
+                        } text-white`}
                     >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Code2 className="w-5 h-5" />}
-                        {loading ? 'Generating...' : `Generate ${artifactType === 'mcp-server' ? 'MCP Server' : artifactType === 'sdk-agent' ? 'SDK Agent' : artifactType === 'api-client' ? 'Client SDK' : artifactType === 'api-server' ? 'Server Stub' : 'Docs'}`}
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (artifactType === 'sdk-agent' ? <Sparkles className="w-5 h-5" /> : <Code2 className="w-5 h-5" />)}
+                        {loading ? 'Generating...' : `Generate ${artifactType === 'mcp-server' ? 'MCP Server' : artifactType === 'sdk-agent' ? 'Google SDK Agent' : artifactType === 'api-client' ? 'Client SDK' : artifactType === 'api-server' ? 'Server Stub' : 'Docs'}`}
                     </button>
                 </div>
             </div>
